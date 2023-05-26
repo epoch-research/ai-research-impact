@@ -144,4 +144,25 @@ Overall expected citation count: 2.66391708000269
   - Result: (mean=2962.620614710257, std=336.11310603602965)
     - The std is about 11% of the mean
     - I didn't write down an exact runtime, but I recall that it took ~minutes
+- Runtime
+  - Baseline: 1 work with 5 selected concepts, 1000 samples per concept: 38s
+    - Intractable. 1M works would take 2 years.
+  - 10 works, no caching: 
+
+## Pivot
+
+- Pre-select institutions
+- Just look at AI (maybe union with ML)
+- Institutions
+  - Google
+  - DeepMind
+  - OpenAI
+  - Meta/Facebook
+  - Microsoft
+  - Baidu
+
+# 2023-May-26
+
+Do Concept objects have citation info?
+
 - 
