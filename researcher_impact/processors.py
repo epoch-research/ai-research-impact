@@ -7,7 +7,7 @@ class OpenAlexProcessor:
         pass
     
     @classmethod
-    def get_institution_author_data(cls, works):
+    def get_institution_author_data(cls, works, selected_institution_ids=None):
         institution_author_data = defaultdict(lambda: defaultdict(set))
         named_institution_author_data = defaultdict(lambda: defaultdict(set))
         for work in works:
@@ -18,6 +18,8 @@ class OpenAlexProcessor:
                     author_name = authorship['author']['display_name']
                     for ins in authorship['institutions']:
                         if ins.get('id') is None:
+                            continue
+                        if selected_institution_ids is not None and ins['id'] not in selected_institution_ids:
                             continue
                         institution_author_data[ins['id']][pub_year].add(author_id)
 
