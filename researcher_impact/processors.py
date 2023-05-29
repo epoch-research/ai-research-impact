@@ -53,3 +53,7 @@ class OpenAlexProcessor:
             seed=seed,
         )
         return works
+
+    @classmethod
+    def get_concepts(cls, work):
+        return [Concepts()[c['id']] for c in work['concepts']]
