@@ -9,12 +9,12 @@ def calculate_institution_author_count(institution_author_data):
         author_counts = OrderedDict()
         for year, authors in sorted(author_series.items()):
             author_counts[year] = len(authors)
-            author_count_array = xr.DataArray(
-                list(author_counts.values()),
-                dims=("year",),
-                coords={"year": list(author_counts.keys()),},
-            )
-            institution_author_count[institution] = author_count_array
+        author_count_array = xr.DataArray(
+            list(author_counts.values()),
+            dims=("year",),
+            coords={"year": list(author_counts.keys()),},
+        )
+        institution_author_count[institution] = author_count_array
     return institution_author_count
 
 def name_institution_author_data(institution_author_data):
