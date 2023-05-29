@@ -57,3 +57,20 @@ class OpenAlexProcessor:
     @classmethod
     def get_concepts(cls, work):
         return [Concepts()[c['id']] for c in work['concepts']]
+
+
+class TestProcessor:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def get_concepts(cls, work):
+        return [
+            {
+                'display_name': 'Concept 1',
+                'counts_by_year': [
+                    {'year': 2009, 'works_count': 7829.60, 'cited_by_count': 141665.20},
+                    
+                ]
+            },
+        ]
