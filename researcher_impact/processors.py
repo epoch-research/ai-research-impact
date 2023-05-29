@@ -1,5 +1,5 @@
 from collections import defaultdict
-from pyalex import Works
+from pyalex import Concepts, Works
 from researcher_impact.pyalex_utils import merge_pages, merge_sample
 
 class OpenAlexProcessor:
