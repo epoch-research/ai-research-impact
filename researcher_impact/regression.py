@@ -4,6 +4,15 @@ import squigglepy as sq
 import statsmodels.api as sm
 
 def fit_linear_regression(x, y):
+    """
+    Fit an Ordinary Least Squares regression model to the data (x, y).
+
+    Returns the fitted regression model.
+
+    Arguments:
+    x -- the independent variable. 2-D array with shape (observations, features).
+    y -- the dependent variable. 1-D array with shape (observations,).
+    """
     X = sm.add_constant(x)
     ols_model = sm.OLS(y, X)
     est = ols_model.fit()
