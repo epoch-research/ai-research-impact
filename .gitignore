@@ -1,4 +1,6 @@
 *.pyc
+*.png
+.DS_Store
 
 data/
 settings.json
