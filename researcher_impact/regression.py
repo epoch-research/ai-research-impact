@@ -98,13 +98,10 @@ def regression_results_bootstrap(models):
     )
     return dict(mean=mean, median=median, ci=ci)
 
-def predict(model, x_start, x_end, num_predictions=100):
-    x_pred = np.linspace(x_start, x_end, num_predictions)
-    X = sm.add_constant(x_pred)
+def predict(model, inputs):
+    X = sm.add_constant(inputs)
     log_preds = model.get_prediction(X).summary_frame()
-    log_preds = pd.concat(
-            [pd.DataFrame({'x': x_pred}), log_preds], axis=1
-    )
+    # log_preds = pd.concat([inputs, log_preds], axis=1)
     return log_preds
 
 def predict_bootstrap(models, x_start, x_end, num_predictions=100):
