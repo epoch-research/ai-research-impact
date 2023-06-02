@@ -454,3 +454,24 @@ Kurtosis:	2.381	Cond. No.	214
     - Number of researchers is roughly log-linear; citation-weighted publications is roughly log-linear. It then seems unremarkable that you can predict one from the other.
     - What would be more interesting is if the inputs followed a less smooth trajectory, and the output was still predictable then.
     - 
+
+# 2023-Jun-02
+
+Same regression as before but per company
+
+- I'll start with just one company, and then I can extend this to iterate over companies.
+- It's going to be a bit tricky to handle all the results, esp. if we want to do abalations.
+- Ok I need to migrate everything to DataArrays. Don't want to propagate this inconsistency any longer.
+- Hmm, regression on Google citations in 3y window is poor. BIC=19.35, R^2 0.16.
+- I think the choice of metric is problematic. The 3y window means we get that dropoff after 2018. 
+- I should try the cited-by count by year for the institution.
+  - Problem with this is it's not limited to AI.
+  - Ok. So what do we need to do?
+    - For each AI work by Google, look at the counts by year.
+    - Put the count for each year into the bucket for each year.
+  - How is that different to what's currently done, using a 0-year window?
+    - Right now the "buckets" are _publication_ year. Instead, we just want the year that the citations occurred.
+- Ok, with new citations each year, it's a much better fit: BIC=-5.060, R^2=0.95.
+  - Interesting that this fit puts about equal weight on the citations in the whole AI field. Whereas the global fit put zero weight on it.
+- I'd be curious to try citations by publication year with a smaller window though. 1 year or 0 years.
+- 
