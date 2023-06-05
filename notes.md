@@ -474,4 +474,55 @@ Same regression as before but per company
 - Ok, with new citations each year, it's a much better fit: BIC=-5.060, R^2=0.95.
   - Interesting that this fit puts about equal weight on the citations in the whole AI field. Whereas the global fit put zero weight on it.
 - I'd be curious to try citations by publication year with a smaller window though. 1 year or 0 years.
-- 
+- Removing 2022
+- Citations in publication year: BIC -10.55, R^2 0.97
+- New citations from any publication: BIC -24.56, R^2 0.995
+
+Is it appropriate to compare BIC across different choices of input data?
+
+- According to GPT-4, not really. 
+
+Hmm... I just realised, new citations from any work per year isn't a measure of citation-weighted works anymore.
+
+- Yet this appears to be more predictable from the number of researchers than citation-weighted works is.
+- Partly it could just be the data staleness issue.
+- But I wouldn't actually expect a better fit between researchers and new citations. New researchers shouldn't cause new citations from works that pre-date those new researchers.
+- Rather, new researchers should be associated with _future_ citations. That's why I'd expect a better fit with works published that year, weighted by the future citations of those works.
+
+Fitting researchers -> new citations for all selected institutions
+
+```
+Meta (United States): R^2=0.83, w1=1.13
+Google (United States): R^2=0.96, w1=2.03
+Massachusetts Institute of Technology: R^2=0.97, w1=3.01
+Microsoft (United States): R^2=0.65, w1=2.54
+Chinese Academy of Sciences: R^2=0.96, w1=2.77
+```
+
+- OpenAI errors, I think that's because I don't have data for all the years
+- DeepMind also errors though. I wouldn't expect that. Should look into it later.
+- Some fits are good (Google, MIT, CAS), while others are bad (Meta, and especially MS).
+  - With Meta, if I eyeball the plots I already had for author count, and future citations, they look more correlated than this.
+  - With MS, it's not so clear.
+- Let's try switching to future citations (0-year window).
+
+```
+Meta (United States): R^2=0.69, w1=1.10
+Google (United States): R^2=0.85, w1=1.65
+Massachusetts Institute of Technology: R^2=0.92, w1=2.24
+Microsoft (United States): R^2=0.77, w1=2.30
+Chinese Academy of Sciences: R^2=0.99, w1=2.69
+```
+
+- Well that didn't go as expected.
+- Visually inspecting, Meta didn't go how I expected because I was matching up the data in the _same_ year. Whereas this is supposed to predict the next year.
+- Did Jaime in fact intend to predict the next year? Or was he thinking of the same year?
+- The thing is, you'd expect a correlation between the number of researchers that you found in a set of works, and the citation-weighted number of works. The fewer works you found, the fewer unique authors you expect to find.
+  - Again, makes me wonder if there's really anything interesting to be gleaned here.
+  - I guess the relationship between them is still interesting - the log-scaling factor between them. That's the `w1` above. Suggests that for Google, the addition of one researcher results in (x+1)^1.65 - x citations. So from 1 to 2 gets you 2.1 more citations, 2 to 3 gets you 3 more citations, 3 to 4 gets you 3.7 more citations, 4 to 5 gets you 4.4 more citations, and so on. If you 2x your researchers, you 3.1x your citations.
+
+# 2023-Jun-05
+
+Testing whether Google Scholar can feasibly help improve our citation data (esp. in 2022).
+
+- Trying out the python package, `scholarly`
