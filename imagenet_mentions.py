@@ -7,8 +7,8 @@ import tqdm
 # The polite pool has much faster and more consistent response times. To get into the polite pool, you set your email:
 pyalex.config.email = "ben@epochai.org"
 
-seed = 20230105
-sample_size = 1000
+SEED = 20230105
+SAMPLE_SIZE = 10  # TODO 1000
 
 def merge_sample(query, sample_size=1000, seed=None):
     sampler = query.sample(sample_size, seed=seed)
@@ -20,29 +20,44 @@ def merge_sample(query, sample_size=1000, seed=None):
 
 works_sample = merge_sample(
     Works().search_filter(abstract="imagenet"),
-    sample_size=sample_size,
-    seed=seed,
+    sample_size=SAMPLE_SIZE,
+    seed=SEED,
 )
 
-imagenet_papers = 0
-imagenet_count = 0
-non_imagenet_count = 0
 null_count = 0
+imagenet_paper_count = 0
+imagenet_ref_count = 0
+non_imagenet_ref_count = 0
+null_ref_count = 0
+
 for work in tqdm.tqdm(works_sample):
     inv_idx = work['abstract_inverted_index']
     if inv_idx is None:
+        null_count += 1
         continue
-    if 'ImageNet' in inv_idx.keys():
-        imagenet_papers += 1
+    inv_idx = {k.lower(): v for k, v in inv_idx.items()}
+    if 'imagenet' in inv_idx.keys():
+        imagenet_paper_count += 1
         for referenced_work_id in work['referenced_works']:
-            referenced_work = Works()[referenced_work_id]
+            try:
+                referenced_work = Works()[referenced_work_id]
+            except:
+                null_ref_count += 1
+                continue
             referenced_inv_idx = referenced_work['abstract_inverted_index']
             if referenced_inv_idx is None:
-                null_count += 1
+                null_ref_count += 1
             else:
-                if 'ImageNet' in referenced_work['abstract_inverted_index'].keys():
-                    imagenet_count += 1
+                referenced_inv_idx = {k.lower(): v for k, v in referenced_inv_idx.items()}
+                if 'imagenet' in referenced_inv_idx.keys():
+                    imagenet_ref_count += 1
                 else:
-                    non_imagenet_count += 1
+                    non_imagenet_ref_count += 1
 
-print(imagenet_papers, imagenet_count, non_imagenet_count, null_count)
+
+print(f"Papers with no abstract inverted index available: {null_count}")
+print(f"Papers mentioning ImageNet in their Abstract: {imagenet_paper_count}")
+print(f"References with no abstract inverted index available: {null_ref_count}")
+print(f"References mentioning ImageNet in their Abstract: {imagenet_ref_count}")
+print(f"References not mentioning ImageNet in their Abstract: {non_imagenet_ref_count}")
+print(f"Fraction: {imagenet_ref_count / (imagenet_ref_count + non_imagenet_ref_count):.2f}")
