@@ -1,4 +1,5 @@
 from collections import defaultdict
+import numpy as np
 from pyalex import Concepts, Works
 from researcher_impact.pyalex_utils import merge_pages, merge_sample
 from researcher_impact.citations import get_citation_count_in_first_years
@@ -31,6 +32,26 @@ class OpenAlexProcessor:
                     ins_name = ins['display_name']
                     named_institution_author_data[ins_name][pub_year].add(author_name)
         return institution_author_data, named_institution_author_data
+    
+    @classmethod
+    def get_institution_citation_distribution(cls, works, selected_institution_ids=None, citation_window_size=3):
+        institution_cited_by_count = defaultdict(list)
+        for work in works:
+            citation_count = get_citation_count_in_first_years(work, years=citation_window_size)
+            for authorship in work['authorships']:
+                if len(authorship['institutions']) == 0:
+                    continue
+                for ins in authorship['institutions']:
+                    if ins.get('id') is None:
+                        continue
+                    if selected_institution_ids is not None and ins['id'] not in selected_institution_ids:
+                        continue
+                    institution_cited_by_count[ins['id']].append(citation_count)
+
+        for ins, cited_by_count in institution_cited_by_count.items():
+            institution_cited_by_count[ins] = np.array(cited_by_count)
+        
+        return institution_cited_by_count
     
     @classmethod
     def get_institution_counts(cls, works, selected_institution_ids=None, citation_window_size=3):
