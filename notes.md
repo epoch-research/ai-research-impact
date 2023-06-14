@@ -526,3 +526,208 @@ Chinese Academy of Sciences: R^2=0.99, w1=2.69
 Testing whether Google Scholar can feasibly help improve our citation data (esp. in 2022).
 
 - Trying out the python package, `scholarly`
+- With proxy: 
+  - Proxy might not be important if I just call `search_authors`
+  - I stopped it after 21 minutes
+  - 18 works in 21 minutes - that's intractable. Thousands of hours.
+
+```
+ 67%|██████▋   | 18/27 [16:52<08:26, 56.24s/it]
+  0%|          | 0/10 [21:06<?, ?it/s]
+```
+
+- Without proxy: 264 seconds to get through 140 works - about 2 seconds per work.
+  - It seems like most of the time is taken up by getting the author data. The publication progress bar completes ~instantly based on one observation.
+  - Hmm, but the time estimate from tqdm suggests it is taking time... am I just not using tqdm correctly here?
+  - Perhaps I should use `tqdm.notebook`.
+
+```
+100%|██████████| 27/27 [01:40<00:00,  3.72s/it]
+ 10%|█         | 1/10 [01:52<16:48, 112.06s/it]
+```
+
+- Anyway, let's assume we can do 2 seconds per work on average.
+- We have ~100,000 works to get through. Probably more when we add more institutions.
+- 100,000 * 2 = 200,000 seconds. That's about 56 hours.
+  - Well, it's not out of the question.
+  - Might take a week, ultimately.
+- `MaxTriesExceededException` happened. We'd need a way to handle that.
+  - Unless proxies avoid this?
+- Also, this time it was 382 works in about 26 minutes. That's about 4.1 seconds per work.
+
+```
+100%|██████████| 27/27 [01:40<00:00,  3.72s/it]
+100%|██████████| 113/113 [07:00<00:00,  3.72s/it]
+100%|██████████| 35/35 [02:14<00:00,  3.83s/it]
+100%|██████████| 25/25 [01:34<00:00,  3.77s/it]
+100%|██████████| 156/156 [09:45<00:00,  3.75s/it]
+  9%|▊         | 26/301 [02:01<21:21,  4.66s/it]
+ 70%|███████   | 7/10 [26:01<11:09, 223.13s/it]
+---------------------------------------------------------------------------
+MaxTriesExceededException                 Traceback (most recent call last)
+Cell In[9], line 17
+     15     num_works += len(author_works)
+     16     for work in tqdm(author_works):
+---> 17         work_filled = scholarly.fill(work)
+     18         cites_per_year = work_filled['cites_per_year']
+     20 print(f"took {time.time() - t0} seconds to process {num_works} works: average {num_works / (time.time() - t0)} works per second")
+
+File ~/miniconda3/envs/epoch/lib/python3.11/site-packages/scholarly/_scholarly.py:238, in _Scholarly.fill(self, object, sections, sortby, publication_limit)
+    236 elif object['container_type'] == "Publication":
+    237     publication_parser = PublicationParser(self.__nav)
+--> 238     object = publication_parser.fill(object)
+    239 return object
+
+File ~/miniconda3/envs/epoch/lib/python3.11/site-packages/scholarly/publication_parser.py:278, in PublicationParser.fill(self, publication)
+    276 if publication['source'] == PublicationSource.AUTHOR_PUBLICATION_ENTRY:
+    277     url = _CITATIONPUB.format(publication['author_pub_id'])
+--> 278     soup = self.nav._get_soup(url)
+    279     publication['bib']['title'] = soup.find('div', id='gsc_oci_title').text
+    280     if publication['bib']['title'][-1] == '\u2026':
+
+File ~/miniconda3/envs/epoch/lib/python3.11/site-packages/scholarly/_navigator.py:239, in Navigator._get_soup(self, url)
+    237 def _get_soup(self, url: str) -> BeautifulSoup:
+    238     """Return the BeautifulSoup for a page on scholar.google.com"""
+...
+    188     return self._get_page(pagerequest, True)
+    189 else:
+--> 190     raise MaxTriesExceededException("Cannot Fetch from Google Scholar.")
+
+MaxTriesExceededException: Cannot Fetch from Google Scholar.
+```
+
+- Is this tractable? It's borderline. We'd have to execute one clean run to get the data.
+- I could limit to 2022 but then I'm concerned about the mismatch between OpenAlex and Scholar data.
+  - Why don't we make a comparison? Grab like 100 works and compare the citation counts.
+  - Consider: if the citation counts are similar enough in previous years, we could cut the runtime we need by ~90%. It would only take a day and then it would be tractable.
+- The original prompt from David was actually just about DM and OAI, which is a very small number of works: "Using google scholar scraper to cross-check DeepMind and OAI (because they have a small number of works)"
+
+Comparing citation counts of OpenAlex and Google Scholar
+
+- Taking a random sample of the works that I saved for the selected institutions.
+  - Limitation: the first search result on Google Scholar won't necessarily match
+  - Takes a long time to query Google Scholar. I'm using the proxy. 5 minutes and it's only on the 4th work.
+  - In contrast, 18 seconds for 10 works without the proxy.
+  - Ok, from a sample of 10, I get:
+    - Mean signed error: 14.4
+    - Mean absolute error: 14.4
+    - Mean squared error: 24.2
+    - Mean relative error (excluding the two zero values): 3.27
+  - Now I keep hitting 'MaxTriesExceededError`. That's what the proxy is for...
+    - But it backs off. If I wait a few minutes I can query again.
+- What about the first twenty sequentially? These are the top-cited, or at least tend to be highly cited, and that's where most of the weight is going to come from in my analysis.
+  - Ok, managed to get the first ten before max tries error.
+  - Mean relative error: 2.94x
+  - Std of relative error: 2.24x
+
+Overall take:
+
+- Scholar citations differ drastically (~3x larger on average, with high variance). So it's problematic to mix the two.
+
+Tangent: ratio of references mentioning ImageNet to references not mentioning ImageNet (in the Abstract), for papers that mention ImageNet. Tamay seemed interested in this from the WiP today.
+
+```python
+import numpy as np
+from numpy.random import default_rng
+import pickle
+import pyalex
+from pyalex import Authors, Concepts, Institutions, Works
+from scholarly import scholarly
+from scholarly import ProxyGenerator
+import tqdm
+
+
+def merge_sample(query, sample_size=1000, seed=None):
+    sampler = query.sample(sample_size, seed=seed)
+    items = []
+    for i in range(int(np.ceil(sample_size / 200)) + 1):  # 200 is the max page size
+        page = sampler.get(per_page=200, page=i+1)
+        items.extend(page)
+    return items
+
+# The polite pool has much faster and more consistent response times. To get into the polite pool, you set your email:
+pyalex.config.email = "ben@epochai.org"
+
+data_file_location = 'data/'
+
+SEED = 20230105
+rng = default_rng(seed=SEED)
+
+works_sample = merge_sample(
+    Works().search_filter(abstract="imagenet"),
+    sample_size=1000,
+    seed=SEED,
+)
+
+imagenet_papers = 0
+imagenet_count = 0
+non_imagenet_count = 0
+null_count = 0
+for work in tqdm.tqdm(works_sample):
+    inv_idx = work['abstract_inverted_index']
+    if inv_idx is None:
+        continue
+    if 'ImageNet' in inv_idx.keys():
+        imagenet_papers += 1
+        for referenced_work_id in work['referenced_works']:
+            referenced_work = Works()[referenced_work_id]
+            referenced_inv_idx = referenced_work['abstract_inverted_index']
+            if referenced_inv_idx is None:
+                null_count += 1
+            else:
+                if 'ImageNet' in referenced_work['abstract_inverted_index'].keys():
+                    imagenet_count += 1
+                else:
+                    non_imagenet_count += 1
+```
+
+- Old result that randomly sampled 10,000 papers from the "AI papers by selected institutions" dataset (N.B. only 70 of those papers mentioned ImageNet):
+
+```python
+print(imagenet_papers, imagenet_count, non_imagenet_count, null_count)
+70 326 1224 54
+```
+
+  - Ratio: 326 / (326 + 1224) = 21%
+
+- New result with 200 papers that have "ImageNet" in the abstract (execution was interrupted on 1000 papers, but I think it's valid data at any point in time):
+
+```
+print(imagenet_papers, imagenet_count, non_imagenet_count, null_count)
+200 650 2546 202
+```
+
+  - Ratio: 650 / (650 + 2546) = 20%
+
+- Full sample of 1000, matching "imagenet" on lower-cased abstract: 649 2226 8579 585. 
+  - Huh. So still only 649 out of 1000. 404 errors perhaps? Unclear.
+  - 2226 / (2226 + 8579) = 21%.
+- The 20% result looks pretty robust.
+
+# 2023-Jun-06
+
+Plotting histograms of citations by institution
+
+# 2023-Jun-07
+
+Plotting histograms of citations by institution
+
+- What was this for again?
+  - Getting an idea of different institutions' different strategies (a few highly cited papers vs lots of less cited ones).
+  - Just a base sense of what the distribution of citations looks like.
+- David asks: Can you do it more like a kdeplot per institution?
+
+====
+Papers with no abstract inverted index available: 0
+Papers with ImageNet in the Abstract inverted index: 1000
+Mean fraction of references mentioning ImageNet: 0.26
+Std fraction of references mentioning ImageNet: 0.19
+
+Papers with no Abstract available: 0
+Papers with ImageNet in the Abstract: 1000
+Mean fraction of references mentioning ImageNet in the Abstract: 0.26
+Std fraction of references mentioning ImageNet in the Abstract: 0.19
+
+# 2023-Jun-14
+
+
