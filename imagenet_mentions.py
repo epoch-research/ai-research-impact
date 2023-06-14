@@ -8,7 +8,7 @@ import tqdm
 pyalex.config.email = "ben@epochai.org"
 
 SEED = 20230105
-SAMPLE_SIZE = 10  # TODO 1000
+SAMPLE_SIZE = 1000  # TODO 1000
 
 def merge_sample(query, sample_size=1000, seed=None):
     sampler = query.sample(sample_size, seed=seed)
@@ -26,38 +26,38 @@ works_sample = merge_sample(
 
 null_count = 0
 imagenet_paper_count = 0
-imagenet_ref_count = 0
-non_imagenet_ref_count = 0
-null_ref_count = 0
+imagenet_ref_fractions = []
 
 for work in tqdm.tqdm(works_sample):
-    inv_idx = work['abstract_inverted_index']
-    if inv_idx is None:
+    abstract = work['abstract']
+    if abstract is None:
         null_count += 1
         continue
-    inv_idx = {k.lower(): v for k, v in inv_idx.items()}
-    if 'imagenet' in inv_idx.keys():
+    if 'imagenet' in abstract.lower():
         imagenet_paper_count += 1
+        imagenet_ref_count = 0
+        non_imagenet_ref_count = 0
+        null_ref_count = 0
         for referenced_work_id in work['referenced_works']:
             try:
                 referenced_work = Works()[referenced_work_id]
             except:
                 null_ref_count += 1
                 continue
-            referenced_inv_idx = referenced_work['abstract_inverted_index']
-            if referenced_inv_idx is None:
+            referenced_abstract = referenced_work['abstract']
+            if referenced_abstract is None:
                 null_ref_count += 1
+                continue
+            if 'imagenet' in referenced_abstract.lower():
+                imagenet_ref_count += 1
             else:
-                referenced_inv_idx = {k.lower(): v for k, v in referenced_inv_idx.items()}
-                if 'imagenet' in referenced_inv_idx.keys():
-                    imagenet_ref_count += 1
-                else:
-                    non_imagenet_ref_count += 1
+                non_imagenet_ref_count += 1
+        if imagenet_ref_count + non_imagenet_ref_count != 0:
+            imagenet_ref_fractions.append(imagenet_ref_count / (imagenet_ref_count + non_imagenet_ref_count))
 
+imagenet_ref_fractions = np.array(imagenet_ref_fractions)
 
-print(f"Papers with no abstract inverted index available: {null_count}")
-print(f"Papers mentioning ImageNet in their Abstract: {imagenet_paper_count}")
-print(f"References with no abstract inverted index available: {null_ref_count}")
-print(f"References mentioning ImageNet in their Abstract: {imagenet_ref_count}")
-print(f"References not mentioning ImageNet in their Abstract: {non_imagenet_ref_count}")
-print(f"Fraction: {imagenet_ref_count / (imagenet_ref_count + non_imagenet_ref_count):.2f}")
+print(f"Papers with no Abstract available: {null_count}")
+print(f"Papers with ImageNet in the Abstract: {imagenet_paper_count}")
+print(f"Mean fraction of references mentioning ImageNet in the Abstract: {imagenet_ref_fractions.mean():.2f}")
+print(f"Std fraction of references mentioning ImageNet in the Abstract: {imagenet_ref_fractions.std():.2f}")
