@@ -1,148 +1,97 @@
 from collections import defaultdict
 import numpy as np
-from pyalex import Concepts, Works
-from researcher_impact.pyalex_utils import merge_pages, merge_sample
+
 from researcher_impact.citations import get_citation_count_in_first_years
-from researcher_impact.utils import dict_to_dataarray
+from researcher_impact.utils import dicts_to_dataarrays
+
 
 class OpenAlexProcessor:
-    def __init__(self):
-        pass
-    
-    @classmethod
-    def get_institution_author_data(cls, works, selected_institution_ids=None):
-        institution_author_data = defaultdict(lambda: defaultdict(set))
-        named_institution_author_data = defaultdict(lambda: defaultdict(set))
-        for work in works:
-            pub_year = work['publication_year']
-            for authorship in work['authorships']:
-                if authorship['author'].get('id') is None:
-                    continue
-                if len(authorship['institutions']) == 0:
-                    continue
-                author_id = authorship['author']['id']
-                author_name = authorship['author']['display_name']
-                for ins in authorship['institutions']:
-                    if ins.get('id') is None:
-                        continue
-                    if selected_institution_ids is not None and ins['id'] not in selected_institution_ids:
-                        continue
-                    institution_author_data[ins['id']][pub_year].add(author_id)
+    def __init__(
+        self,
+        works,
+        selected_institution_ids,
+        institution_aliases,
+        citation_year_bound=3,
+    ):
+        self.works = works
+        self.selected_institution_ids = selected_institution_ids
+        self.institution_aliases = institution_aliases
+        self.citation_year_bound = citation_year_bound
 
-                    ins_name = ins['display_name']
-                    named_institution_author_data[ins_name][pub_year].add(author_name)
-        return institution_author_data, named_institution_author_data
-    
-    @classmethod
-    def get_institution_citation_distribution(cls, works, selected_institution_ids=None, citation_window_size=3):
-        institution_cited_by_count = defaultdict(list)
-        for work in works:
-            citation_count = get_citation_count_in_first_years(work, years=citation_window_size)
-            for authorship in work['authorships']:
-                if len(authorship['institutions']) == 0:
-                    continue
-                for ins in authorship['institutions']:
-                    if ins.get('id') is None:
-                        continue
-                    if selected_institution_ids is not None and ins['id'] not in selected_institution_ids:
-                        continue
-                    institution_cited_by_count[ins['id']].append(citation_count)
+        self.data = None
+        self.author_counts = None
+        self.individual_bounded_citations = None
+        self.bounded_citations = None
+        self.work_counts = None
 
-        for ins, cited_by_count in institution_cited_by_count.items():
-            institution_cited_by_count[ins] = np.array(cited_by_count)
-        
-        return institution_cited_by_count
-    
-    @classmethod
-    def get_institution_counts(cls, works, selected_institution_ids=None, citation_window_size=3):
-        """
-        For each year, count the citations for each work published in that year, within some window 
-        of subsequent years. Also count the number of works published in each year.
-        """
-        institution_work_count = defaultdict(lambda: defaultdict(int))
-        institution_cited_by_count = defaultdict(lambda: defaultdict(int))
-        for work in works:
-            pub_year = work['publication_year']
-            citation_count = get_citation_count_in_first_years(work, years=citation_window_size)
-            for authorship in work['authorships']:
-                if len(authorship['institutions']) == 0:
-                    continue
-                for ins in authorship['institutions']:
-                    if ins.get('id') is None:
-                        continue
-                    if selected_institution_ids is not None and ins['id'] not in selected_institution_ids:
-                        continue
-                    institution_cited_by_count[ins['id']][pub_year] += citation_count
-                    institution_work_count[ins['id']][pub_year] += 1
-
-        # TODO use a 2D DataArray instead of a dict of DataArray
-        for ins, cited_by_count in institution_cited_by_count.items():
-            institution_cited_by_count[ins] = dict_to_dataarray(cited_by_count, 'year')
-
-        for ins, work_count in institution_work_count.items():
-            institution_work_count[ins] = dict_to_dataarray(work_count, 'year')
-
-        return institution_cited_by_count, institution_work_count
-    
-    @classmethod
-    def get_institution_new_citations(cls, works, selected_institution_ids=None):
-        """
-        For each year, count the new citations (of works from any year).
-        """
-        # institution -> (year -> count)
-        institution_cited_by_count = defaultdict(lambda: defaultdict(int))
-        for work in works:
-            counts_by_year = work['counts_by_year']
-            for authorship in work['authorships']:
-                if len(authorship['institutions']) == 0:
-                    continue
-                for ins in authorship['institutions']:
-                    if ins.get('id') is None:
-                        continue
-                    if selected_institution_ids is not None and ins['id'] not in selected_institution_ids:
-                        continue
-                    for year_count in counts_by_year:
-                        year = year_count['year']
-                        cited_by_count = year_count['cited_by_count']
-                        institution_cited_by_count[ins['id']][year] += cited_by_count
-
-        for ins, cited_by_count in institution_cited_by_count.items():
-            institution_cited_by_count[ins] = dict_to_dataarray(cited_by_count, 'year')
-
-        return institution_cited_by_count
-
-    @classmethod
-    def get_institution_works(cls, institution_id, concept_ids=None):
-        if concept_ids is None:
-            works = merge_pages(
-                Works() \
-                    .filter(authorships={"institutions": {"id": institution_id}}) \
-                    .paginate(n_max=100000)
+    def process_works(self):
+        self.data = defaultdict(  # keys: data type
+            lambda: defaultdict(  # keys: institution
+                lambda: defaultdict(list)  # keys: year
             )
-        else:
-            works = merge_pages(
-                Works() \
-                    .filter(authorships={"institutions": {"id": institution_id}}) \
-                    .filter(concepts={"id": concept_ids}) \
-                    .paginate(n_max=100000)
-            )
-        return works
-
-    @classmethod
-    def get_concept_works(cls, concept, pub_year, pub_type, seed):           
-        works = merge_sample(
-            Works() \
-                .filter(concepts={"id": concept['id']}) \
-                .filter(publication_year=pub_year) \
-                .filter(type=pub_type),
-            sample_size=1000,
-            seed=seed,
         )
-        return works
+        for work in self.works:
+            self.process_authorships(work)
 
-    @classmethod
-    def get_concepts(cls, work):
-        return [Concepts()[c['id']] for c in work['concepts']]
+    def process_authorships(self, work):
+        pub_year = work["publication_year"]
+        bounded_citations = get_citation_count_in_first_years(
+            work, years=self.citation_year_bound
+        )
+        self.data["bounded_citations"][alias][pub_year].append(bounded_citations)
+        for authorship in work["authorships"]:
+            if len(authorship["institutions"]) == 0:
+                continue
+            self.process_institutions(authorship, pub_year, bounded_citations)
+
+    def process_institutions(self, authorship, pub_year, bounded_citations):
+        author_id = authorship["author"]["id"]
+        author_name = authorship["author"]["display_name"]
+        for ins in authorship["institutions"]:
+            if ins.get("id") is None:
+                continue
+            if not (
+                self.selected_institution_ids is None
+                or ins["id"] in self.selected_institution_ids
+            ):
+                continue
+            alias = self.institution_aliases[ins["id"]]
+            self.data["authors"][alias][pub_year].append(author_id)
+            self.data["author_names"][alias][pub_year].append(author_name)
+
+    def get_author_data(self):
+        return self.data["authors"]
+
+    def get_author_name_data(self):
+        return self.data["author_names"]
+    
+    def get_author_counts(self):
+        self.author_counts = dicts_to_dataarrays(
+            self.data["authors"], 'year', val_fn=len
+        )
+        return self.author_counts
+
+    def get_individual_bounded_citations(self):
+        merged_bounded_citations = defaultdict(list)
+        for alias, year_data in self.data["bounded_citations"].items():
+            for bounded_citations in year_data.values():
+                merged_bounded_citations[alias].extend(bounded_citations)
+        self.individual_bounded_citations = {
+            k: np.array(v) for k, v in merged_bounded_citations.items()
+        }
+        return self.individual_bounded_citations
+
+    def get_bounded_citations(self):
+        self.bounded_citations = dicts_to_dataarrays(
+            self.data["bounded_citations"], "year", val_fn=sum,
+        )
+        return self.bounded_citations
+
+    def get_work_counts(self):
+        self.work_counts = dicts_to_dataarrays(
+            self.data["bounded_citations"], "year", val_fn=len,
+        )
+        return self.work_counts
 
 
 class TestProcessor:
@@ -153,10 +102,9 @@ class TestProcessor:
     def get_concepts(cls, work):
         return [
             {
-                'display_name': 'Concept 1',
-                'counts_by_year': [
-                    {'year': 2009, 'works_count': 7829.60, 'cited_by_count': 141665.20},
-                    
-                ]
+                "display_name": "Concept 1",
+                "counts_by_year": [
+                    {"year": 2009, "works_count": 7829.60, "cited_by_count": 141665.20},
+                ],
             },
         ]

@@ -946,4 +946,129 @@ New rankings:
 - Differences in top 10:
   - Before: Tencent, Huawei, Amazon 
   - Now: NVIDIA, Naver, Uber
+- Trying just citations, not averaged
+
+```
+1. Google: 37.1%
+2. DeepMind: 24.8%
+3. Meta: 11.7%
+4. Microsoft: 9.5%
+5. OpenAI: 5.3%
+6. Alibaba: 1.6%
+7. NVIDIA: 1.6%
+8. Baidu: 1.5%
+9. Amazon: 1.0%
+10. Tencent: 0.9%
+11. Huawei: 0.5%
+12. Adobe Systems: 0.5%
+13. Stability: 0.4%
+14. Twitter: 0.4%
+15. Runway: 0.4%
+16. Netflix: 0.4%
+17. Megvii: 0.4%
+18. Salesforce: 0.4%
+19. Xerox: 0.4%
+20. Group Sense: 0.3%
+21. Naver: 0.2%
+22. Yahoo: 0.1%
+23. NEC: 0.1%
+24. Uber: 0.1%
+25. Jingdong: 0.1%
+26. LinkedIn: 0.1%
+27. Dascena: 0.1%
+28. Tata Consultancy Services: 0.0%
+```
+
+- Looks more appropriate to me
+- Still a question around Huawei.
+- As one more variation I'll try including all ML systems in the PCD database, not just notable systems.
+- You know what, I don't have enough time. Leaving it.
+
+## Updating data processing with new institutions
+
+- **Also limiting to the Machine Learning concept**
+- Citation histogram
+  - Hmm. Before, OpenAI had more citations in the 100 - 999 range than DeepMind. Now it has less than DeepMind.
+  - This makes me question just using ML pubs.
+  - Let me investigate which OpenAI works are tagged AI vs. ML.
+  - I think it would be fair to select institutions by ML only (due to noise in AI tag), but then once we've narrowed down the top ML-focused institutions, it's reasonable to include AI pubs because those AI pubs are more likely still about cutting-edge ML.
+  - OpenAI and DeepMind are good ones to test because they are focused on AGI.
+- Ok, after looking at what is tagged AI vs. ML for OpenAI and DeepMind, I'm convinced that we should include the AI tag. There are lots of important, highly-cited works that are tagged AI but not ML.
+
+DeepMind - AI but not ML:
+
+```
+Distilling Policy Distillation: 17
+Meta-learning in natural and artificial intelligence: 34
+A probabilistic approach to demixing odors: 51
+High Fidelity Speech Synthesis with Adversarial Networks: 52
+Computations Underlying Social Hierarchy Learning: Distinct Neural Mechanisms for Updating and Representing Self-Relevant Information: 104
+Distilling Policy Distillation: 15
+Applying and improving <scp>AlphaFold</scp> at <scp>CASP14</scp>: 137
+Cross-Lingual Word Embeddings: 15
+Deep Reinforcement Learning for Tactile Robotics: Learning to Type on a Braille Keyboard: 14
+Mental labour: 105
+Sample-efficient adaptive text-to-speech: 31
+Massively Parallel Video Networks: 23
+The NarrativeQA Reading Comprehension Challenge: 19
+Protein complex prediction with AlphaFold-Multimer: 636
+Agent57: Outperforming the Atari Human Benchmark: 46
+Efficient Neighbourhood Consensus Networks via Submanifold Sparse Convolutions: 46
+Placing language in an integrated understanding system: Next steps toward human-level performance in neural language models: 36
+Decoupled neural interfaces using synthetic gradients: 100
+Deep Learning with Dynamic Spiking Neurons and Fixed Feedback Weights: 60
+Grounded Language Learning Fast and Slow: 12
+Exact sampling of determinantal point processes with sublinear time preprocessing: 23
+Cross-View Policy Learning for Street Navigation: 16
+Piano Genie: 22
+People construct simplified mental representations to plan: 10
+Toward a universal decoder of linguistic meaning from brain activation: 175
+...
+Recurrent Neural Network Transducer for Audio-Visual Speech Recognition: 45
+Convolutional Neural Network Architecture for Geometric Matching: 347
+The Lipschitz Constant of Self-Attention: 19
+Temporal Query Networks for Fine-grained Video Understanding: 22
+```
+
+Bug
+
+- I think I just noticed a bug. I cleaned up the `OpenAlexProcessor` and I was looking at the individual citations and noticed heaps of duplication.
+- So then I realised: is it appending the citation count repeatedly for every author x affiliation on the paper? I think so.
+  - Not certain if this bug was present in the previous code but I'm pretty sure it was.
+- This is an output of the old code - the problem is there too:
+
+```
+> institution_cited_by_distribution
+defaultdict(list,
+            {'Meta': array([9052,  409,  940, ...,  242,   36,   21]),
+             'Google': array([9052, 6655, 6655, ...,   17,   13,   13]),
+             'OpenAI': array([4964,  498,  241,   18,   18,   11,   11,   67,   67,   62,   62,
+                      35, 4964, 2012,  498, 1274,  700,  700,  700,  700,  700,  700,
+                     674,  674,  674,  674,  674,  674,  674,  674,  674,  674,  674,
+                     674,  674,  674,  674,  674,  725,  725,  725,  725,  725,  725,
+                     725,  725,  725,  725,  725,  725,  725,  725,  725,  725,  451,
+                     451,  451,  451,  319,  319,  319,  241,  197,   85,  108,   81,
+                     132,  132,   90,   72,   72,   72,   72,   72,   72,   72,   65,
+                      83,   83,   83,   83,   83,   40,   58,   67,   67,   63,   62,
+                      62,   57,   57,   57,   57,   57,   56,   40,   29,   35,   17,
+                      24,   26,   24,   17,   21,   18,   18,   12,   14,   13,   11,
+                      10,   11,   72,   72,   72,   72,   72,   72,   72,   13,   13,
+                      13]),
+             'DeepMind': array([4592, 4592, 4592, ...,   10,   75,   75]),
+             'Microsoft': array([872,  85,  85, ...,   9,  10,  10]),
+             'Amazon': array([6842,  455,  267, ...,   20,   17,   12]),
+             'Baidu': array([153, 153, 153, ...,  10,  10,  10]),
+             'Nvidia': array([205, 205, 205, ...,  40,  40,  34]),
+             'Tencent': array([116, 116,  70, ...,   9,   9,   9]),
+             'Alibaba': array([10, 19, 16, ..., 13, 13, 12])})
+```
+
 - 
+
+## Process all Machine Learning papers?
+
+- The i10-index of the Machine Learning concept is only about 600K.
+  - I think that would make calculating future citations of works each year tractable.
+    - Previously I was only considering citations of past works for the concept of Artificial Intelligence.
+  - In fact, it might even make FWCI tractable, though that might be pointless.
+    - Nah, FWCI still has to consider all the other fields. 
