@@ -38,13 +38,15 @@ class OpenAlexProcessor:
         bounded_citations = get_citation_count_in_first_years(
             work, years=self.citation_year_bound
         )
-        self.data["bounded_citations"][alias][pub_year].append(bounded_citations)
+        # For each work we'll need to check if citations are already added to a given 
+        # institution's list, because multiple authors may have the same affiliation
+        bounded_citations_added = defaultdict(bool)
         for authorship in work["authorships"]:
             if len(authorship["institutions"]) == 0:
                 continue
-            self.process_institutions(authorship, pub_year, bounded_citations)
+            self.process_institutions(authorship, pub_year, bounded_citations, bounded_citations_added)
 
-    def process_institutions(self, authorship, pub_year, bounded_citations):
+    def process_institutions(self, authorship, pub_year, bounded_citations, bounded_citations_added):
         author_id = authorship["author"]["id"]
         author_name = authorship["author"]["display_name"]
         for ins in authorship["institutions"]:
@@ -56,6 +58,9 @@ class OpenAlexProcessor:
             ):
                 continue
             alias = self.institution_aliases[ins["id"]]
+            if not bounded_citations_added[alias]:
+                self.data["bounded_citations"][alias][pub_year].append(bounded_citations)
+                bounded_citations_added[alias] = True
             self.data["authors"][alias][pub_year].append(author_id)
             self.data["author_names"][alias][pub_year].append(author_name)
 

@@ -1063,7 +1063,100 @@ defaultdict(list,
              'Alibaba': array([10, 19, 16, ..., 13, 13, 12])})
 ```
 
-- 
+- The difficulty to fix this is that we need the institution name (which is inside the authorship x institution loops) before adding the citation count.
+- Is there a way we can know whether the count has already been added for this institution?
+- We _do_ want to add the same citation count to _different_ institutions.
+- So I think the problem is when multiple authors have the same affiliation.
+- Using a dictionary to flag which institutions have had citations added, for each work.
+- Cool.
+- Repetition has been greatly reduced:
+
+```
+{'Meta': array([9052,  312,  282, ...,    5,    5,   18]),
+ 'Google': array([9052, 6655, 3124, ...,   14,   17,   12]),
+ 'OpenAI': array([4964, 4964, 1274,  700,   85,   65,   40,   40,   17,   17,  498,
+         498,  241, 2012,  451,  319,  241,  197,  108,   81,   90,   72,
+          58,   29,   72,   18,   67,  674,   67,   18,   14,   11,   62,
+          83,   62,   57,   56,   13,   11,   10,   13,   13,   13,   11,
+          11,   62,   35,  725,  132,   62,   35,   24,   26,   24,   21,
+          63,   12]),
+ 'DeepMind': array([4592,  164,  259,   40,   11,   11,    8, 4592,  550,  467,  188,
+         159,  101,   41,   27,   36,   31,   32,   25,    2,   15,   10,
+        4592,  550,  164,  467,  259,  188,  159,  167,   89,  101,   23,
+          41,   27,   40,   36,   31,   29,   32,   25,   23,   34,   25,
+           2,   15,   10,   11,   11,    9,    8,   64,   91,   13,   11,
+        3388,   47,   16,   15, 3388,   64,   91,   47,   16,   10,   15,
+          13,   11,    9,    9, 1182,  105,   94,   89,   63,   62,   52,
+          52,   50,   46,   36,   32,   31,   31,   27,   24,   24,   21,
+          20,   19,   19,   17,   12,   12,   11,   10, 1182,  127,  101,
+          42,   14,  348,  117, 1782, 1321, 1182,  621,  387,  348,  320,
+         279,  223,  204,  203,  180,  127,  129,  126,  117,  105,  101,
+          98,   94,   90,   89,   85,   63,   62,   55,   52,   52,   52,
+          50,   50,   46,   46,   44,   42,   39,   37,   36,   36,   35,
+          33,   33,   32,   31,   31,   31,   30,   27,   27,   27,   25,
+          24,   24,   24,   22,   21,   20,   19,   18,   19,   18,   17,
+          17,   17,   17,   16,   16,   15,   15,   15,   14,   13,   13,
+          12,   12,   12,   12,   12,   12,   12,   12,   11,   11,   11,
+...
+          28,   14,   11,   12,    5,    5,    6,    0,    9,   18,    5,
+           2,   25,   37,   23,   10,    8,    7,    7,    9,   25,   14,
+          13,   20,    5,    4,   11]),
+ 'Tencent': array([116,  27,  17, ...,   4,  12,  12]),
+ 'Alibaba': array([10, 30, 10, ..., 19, 18,  6])}
+ ```
+
+ - ...but there's still a bit of suspicious repetition e.g. OpenAI with 4964 twice. 
+  - This could be due to duplicate works. I've already seen duplicate works when listing OpenAI's papers.
+  - If this is right, then we'd have to go one step further and do some (fuzzy) string matching in order to de-duplicate.
+  - The suspicious repetition isn't generally adjacent, it can appear after several other counts.
+- Check for repeated IDs in the dataset
+  - Yes:
+
+```
+> len(works)
+19988
+> len(set([work['id'] for work in works]))
+17957
+```
+
+- My guess is that the disjunction of the institutions means OpenAlex fetches duplicates. And duplicates exist because sometimes these top 10 institutions collaborate.
+- Ok, let's try removing duplicate works.
+- Done.
+- Looks good now:
+
+```
+{'Meta': array([9052,  312,  282, ...,   11,    1,    5]),
+ 'Google': array([9052, 6655, 3124, ...,   11,    9,   12]),
+ 'OpenAI': array([4964, 1274,  700,   85,   65,   40,   40,   17,   17,  498,  241,
+        2012,  451,  319,  197,   81,   90,   72,   58,   29,   18,   67,
+         674,   14,   11,   83,   57,   56,   13,   10,   62,   35,  132,
+          24,   26,   24,   21,   63,   12]),
+ 'DeepMind': array([4592,  164,  259,   40,   11,    8,  550,  467,  188,  159,  101,
+          41,   27,   36,   31,   32,   25,    2,   15,   10,  167,   89,
+          23,   29,   23,   34,   25,    9, 1182,  105,   89,   63,   62,
+          52,   52,   50,   46,   36,   32,   31,   31,   27,   24,   24,
+          21,   20,   19,   19,   17,   12,   11,   10,  127,  101,   42,
+          14,  348,  117, 1782, 1321,  621,  387,  320,  279,  223,  204,
+         203,  180,  129,  126,   98,   90,   85,   55,   52,   50,   46,
+          44,   39,   37,   35,   33,   33,   31,   30,   27,   27,   25,
+          24,   22,   18,   18,   17,   17,   17,   16,   16,   15,   15,
+          15,   13,   13,   12,   12,   12,   12,   12,   12,   11,   11,
+          10,   10,   10,   10,  500,  120,  135,  105,   89,  118,   67,
+          78,   47,   45,   27,   22,  267,  122,   95,   54,   36,   19,
+          27, 3158, 2175, 1169,  376,  261,  230,  185,  192,  190,  228,
+         141,  129,  132,  104,   98,   92,   46,   78,   73,   35,   70,
+          65,   47,   50,   45,   29,   52,   39,   40,   41,   43,   32,
+          31,   30,   31,   26,   18,   18,   16,   16,    7,   11,   10,
+          11,  593,  428,  212,  155,  148,  118,   41,   34,   30,   34,
+          25,   22,   17,   17,   17,   16,   14,   15,   14,   13,   12,
+          11,   11,   10,   82,   56,   37, 1443,  654,  552,  403,  302,
+...
+         15,  16,  13,  14,  12,  12,  78,  12,  27,  10,  10,  20,  20,
+         12,   5,   6,  49,   7,  33,  27,  26,  21,  16,  14,  14,  12,
+         12,  10,  11,  11,  11,  11,   9,  10,   9,  10,  10,   9,  38,
+         35,  22,  19,  18,  14,  12,  13,  10,   9,  18,  28,  19,  18,
+          6])}
+```
 
 ## Process all Machine Learning papers?
 
