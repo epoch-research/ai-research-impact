@@ -728,6 +728,44 @@ Papers with ImageNet in the Abstract: 1000
 Mean fraction of references mentioning ImageNet in the Abstract: 0.26
 Std fraction of references mentioning ImageNet in the Abstract: 0.19
 
-# 2023-Jun-14
+# 2023-Jun-15
 
+Ranking institutions
 
+- Should I download all the works of the 200 institutions?
+- The point would be to filter out low-cited works. Like less than 10 citations.
+  - Could probably do that at the fetching stage.
+- I think these companies don't have as many works as MIT + CAS. It might be manageable.
+- About 4 minutes for the top 10 institutions by works count
+  - So worst case would be 10 times that, 40 minutes.
+  - 1000 institutions would be 400 minutes worst case. 
+- There's an error when I try to do 100 institutions.
+- DM and OAI are in the top 100 companies by citation count. So that should suffice.
+- I think I should select the initial pool of institutions by citation count and then filter after.
+- How many should I start with? To be safe I want to end up with a top 20, max.
+  - I'm going to filter by recency (>= 2010) and non-trivial citations (>= 10)
+    - Just checking: i10-index is "at least 10 citations", so it is >=10 https://guides.library.cornell.edu/c.php?g=32272&p=203393
+  - 200 seems safe.
+- When I use 200 institutions I get
+
+```
+HTTPError: 400 Client Error: Bad Request for url: https://api.openalex.org/works?filter=authorships.institutions.id:https://openalex.org/I1283103587%7Chttps://openalex.org/I1291425158%7Chttps://openalex.org/I1290206253%7C [and so on]
+```
+
+- 10 institutions works. Is there a limit to the number of institutions in the disjunction, or is it a bad URL, or is the format causing an error?
+- I can test the institutions one-by-one to see if there's a bad URL
+  - No error
+- Testing subsets of the institutions
+  - 10: PASS
+  - 100: FAIL
+  - 50: PASS
+  - 99: FAIL
+  - 60: FAIL
+    - There we are:
+
+```
+QueryError: Maximum number of values exceeded for authorships.institutions.id. Decrease values to 50 or below, or consider downloading the full dataset at https://docs.openalex.org/download-snapshot
+```
+
+- So I could just download each slice and merge. Quite easy because it is just a list.
+- 
