@@ -75,6 +75,7 @@ class OpenAlexProcessor:
                     institution_cited_by_count[ins['id']][pub_year] += citation_count
                     institution_work_count[ins['id']][pub_year] += 1
 
+        # TODO use a 2D DataArray instead of a dict of DataArray
         for ins, cited_by_count in institution_cited_by_count.items():
             institution_cited_by_count[ins] = dict_to_dataarray(cited_by_count, 'year')
 
