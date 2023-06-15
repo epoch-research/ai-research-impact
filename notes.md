@@ -728,6 +728,40 @@ Papers with ImageNet in the Abstract: 1000
 Mean fraction of references mentioning ImageNet in the Abstract: 0.26
 Std fraction of references mentioning ImageNet in the Abstract: 0.19
 
+# 2023-Jun-14
+
+Ranking institutions
+
+- Explained method in Slack
+
+```
+Google: 26.7%
+Microsoft: 17.1%
+Meta: 11.4%
+DeepMind: 9.4%
+OpenAI: 5.3%
+Amazon: 4.2%
+Huawei: 3.5%
+Alibaba: 3.4%
+Tencent: 2.3%
+Baidu: 2.2%
+Tata Consultancy Services: 1.8%
+China Mobile: 1.7%
+NVIDIA: 1.7%
+Adobe Systems: 1.7%
+Decision Systems: 1.4%
+Aditya Birla: 1.3%
+Management Sciences: 1.2%
+Aselsan: 0.9%
+Stability: 0.4%
+Twitter: 0.4%
+Runway: 0.4%
+Netflix: 0.4%
+Megvii: 0.4%
+Xerox: 0.4%
+Salesforce: 0.4%
+```
+
 # 2023-Jun-15
 
 Ranking institutions
@@ -768,4 +802,148 @@ QueryError: Maximum number of values exceeded for authorships.institutions.id. D
 ```
 
 - So I could just download each slice and merge. Quite easy because it is just a list.
+- Download looks like a success!
+
+## New ranking
+
+- At least 10 citations (already filtered)
+- Rank institutions by their citations per ~~author~~ publication over the entire period?
+  - I.e. total citations on works in the period, divided by total authors that are unique to the entire period
+  - Or, should I just do citations per publication? Yeah, I think that's simpler.
+- New list
+
+```
+Quansight (United States): 8353.8125
+Enthought (United States): 8258.392857142857
+Google (United Kingdom): 936.1561822125814
+DeepMind (United Kingdom): 561.7433206106871
+Magic Leap (United States): 457.55
+Google (Switzerland): 209.47852760736197
+Meta (Israel): 156.28400780107265
+Twitter (United States): 120.97025171624713
+Brain (Germany): 120.55371900826447
+Google (United States): 117.81490469989345
+Meta (United States): 115.91536748329621
+Nvidia (United Kingdom): 103.94866310160428
+Microsoft Research (United Kingdom): 79.06314774644493
+Group Sense (China): 76.76696542893725
+Intel (Israel): 71.07368421052631
+Nvidia (United States): 67.42679127725857
+Baidu (China): 63.36908077994429
+Amazon (Germany): 62.11317567567568
+Microsoft Research Asia (China): 61.20832169784976
+Amazon (United States): 55.60176991150443
+Huawei Technologies (Sweden): 54.59508196721311
+NEC (United States): 53.99588477366255
+Intel (United States): 51.47703464947623
+```
+
+- Hmm
+- Quansight and Enthought don't seem right. I've never heard of them.
+- I mean, they could be legit.
+- I feel like I should have a threshold on the number of publications.
+
+```
+Google (United Kingdom): 936.1561822125814
+DeepMind (United Kingdom): 561.7433206106871
+Google (Switzerland): 209.47852760736197
+Meta (Israel): 156.28400780107265
+Twitter (United States): 120.97025171624713
+Brain (Germany): 120.55371900826447
+Google (United States): 117.81490469989345
+Meta (United States): 115.91536748329621
+Nvidia (United Kingdom): 103.94866310160428
+Microsoft Research (United Kingdom): 79.06314774644493
+Group Sense (China): 76.76696542893725
+Nvidia (United States): 67.42679127725857
+Baidu (China): 63.36908077994429
+Amazon (Germany): 62.11317567567568
+Microsoft Research Asia (China): 61.20832169784976
+Amazon (United States): 55.60176991150443
+Huawei Technologies (Sweden): 54.59508196721311
+NEC (United States): 53.99588477366255
+Intel (United States): 51.47703464947623
+Jingdong (China): 50.287090558766856
+Willow Wood (United States): 48.323076923076925
+Adobe Systems (United States): 48.31728045325779
+Management Sciences (United States): 45.98395721925134
+Microsoft (United States): 44.159808835528615
+Tencent (China): 43.87391455366447
+```
+
+- What is Willow Wood?
+  - One of the papers lists it as Willow Garage, which developed Robot Operating System (ROS).
+- I'm again feeling like I should limit to Machine Learning.
+  - Done. Only 10636 works.
+- This looks pretty on-point:
+
+```
+Google (United Kingdom): 1735.602510460251
+DeepMind (United Kingdom): 875.7429078014185
+Microsoft Research (United Kingdom): 134.41444866920153
+Google (United States): 117.09986431478968
+Meta (Israel): 108.39317319848293
+Meta (United States): 106.97165991902834
+Naver (South Korea): 93.8896103896104
+Nvidia (United Kingdom): 93.4968944099379
+Uber AI (United States): 82.41
+NEC (United States): 73.67796610169492
+Group Sense (China): 68.96969696969697
+Nvidia (United States): 58.849840255591054
+Adobe Systems (United States): 54.38054607508533
+Baidu (China): 50.42124542124542
+Microsoft Research Asia (China): 50.24925816023739
+Huawei Technologies (China): 49.14693877551021
+Amazon (Germany): 47.5945945945946
+Tencent (China): 45.61834561834562
+Huawei Technologies (Sweden): 43.93700787401575
+Alibaba Group (China): 43.57687420584498
+Microsoft (United States): 42.725121781489214
+Alibaba Group (United States): 39.65384615384615
+Jingdong (China): 38.743718592964825
+LinkedIn (United States): 37.40397350993378
+Amazon (United States): 36.41914191419142
+```
+
+- Still wonder if I should threshold 1000 pubs. Currently at 100.
+- Nah, I shouldn't. There's only 30.
+
+New rankings:
+
+```
+1. DeepMind: 30.9%
+2. Google: 21.3%
+3. Meta: 10.8%
+4. Microsoft: 5.7%
+5. OpenAI: 5.3%
+6. NVIDIA: 2.7%
+7. Naver: 2.3%
+8. Baidu: 2.1%
+9. Uber: 2.0%
+10. Alibaba: 1.9%
+11. NEC: 1.8%
+12. Group Sense: 1.7%
+13. Amazon: 1.4%
+14. Adobe Systems: 1.3%
+15. Huawei: 1.2%
+16. Tencent: 1.1%
+17. Jingdong: 0.9%
+18. LinkedIn: 0.9%
+19. Dascena: 0.9%
+20. Yahoo: 0.5%
+21. Tata Consultancy Services: 0.4%
+22. Stability: 0.4%
+23. Twitter: 0.4%
+24. Runway: 0.4%
+25. Netflix: 0.4%
+26. Megvii: 0.4%
+27. Salesforce: 0.4%
+28. Xerox: 0.4%
+```
+
+- Feel like this is worse.
+- Feel like I _should_ account more for scale rather than just efficiency.
+- Differences in top 10:
+  - Before: Tencent, Huawei, Amazon 
+  - Now: NVIDIA, Naver, Uber
 - 
