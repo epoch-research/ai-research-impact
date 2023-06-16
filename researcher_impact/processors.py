@@ -3,14 +3,15 @@ import numpy as np
 
 from researcher_impact.citations import get_citation_count_in_first_years
 from researcher_impact.utils import dicts_to_dataarrays
+from researcher_impact.test_works import TEST_WORKS
 
 
 class OpenAlexProcessor:
     def __init__(
         self,
         works,
-        selected_institution_ids,
-        institution_aliases,
+        selected_institution_ids=None,
+        institution_aliases=None,
         citation_year_bound=3,
     ):
         self.works = works
@@ -38,15 +39,19 @@ class OpenAlexProcessor:
         bounded_citations = get_citation_count_in_first_years(
             work, years=self.citation_year_bound
         )
-        # For each work we'll need to check if citations are already added to a given 
+        # For each work we'll need to check if citations are already added to a given
         # institution's list, because multiple authors may have the same affiliation
         bounded_citations_added = defaultdict(bool)
         for authorship in work["authorships"]:
             if len(authorship["institutions"]) == 0:
                 continue
-            self.process_institutions(authorship, pub_year, bounded_citations, bounded_citations_added)
+            self.process_institutions(
+                authorship, pub_year, bounded_citations, bounded_citations_added
+            )
 
-    def process_institutions(self, authorship, pub_year, bounded_citations, bounded_citations_added):
+    def process_institutions(
+        self, authorship, pub_year, bounded_citations, bounded_citations_added
+    ):
         author_id = authorship["author"]["id"]
         author_name = authorship["author"]["display_name"]
         for ins in authorship["institutions"]:
@@ -57,9 +62,14 @@ class OpenAlexProcessor:
                 or ins["id"] in self.selected_institution_ids
             ):
                 continue
-            alias = self.institution_aliases[ins["id"]]
+            if self.institution_aliases is None:
+                alias = ins["id"]
+            else:
+                alias = self.institution_aliases.get(ins["id"], ins["id"])
             if not bounded_citations_added[alias]:
-                self.data["bounded_citations"][alias][pub_year].append(bounded_citations)
+                self.data["bounded_citations"][alias][pub_year].append(
+                    bounded_citations
+                )
                 bounded_citations_added[alias] = True
             self.data["authors"][alias][pub_year].append(author_id)
             self.data["author_names"][alias][pub_year].append(author_name)
@@ -69,10 +79,10 @@ class OpenAlexProcessor:
 
     def get_author_name_data(self):
         return self.data["author_names"]
-    
+
     def get_author_counts(self):
         self.author_counts = dicts_to_dataarrays(
-            self.data["authors"], 'year', val_fn=len
+            self.data["authors"], "year", val_fn=len
         )
         return self.author_counts
 
@@ -88,28 +98,73 @@ class OpenAlexProcessor:
 
     def get_bounded_citations(self):
         self.bounded_citations = dicts_to_dataarrays(
-            self.data["bounded_citations"], "year", val_fn=sum,
+            self.data["bounded_citations"],
+            "year",
+            val_fn=sum,
         )
         return self.bounded_citations
 
     def get_work_counts(self):
         self.work_counts = dicts_to_dataarrays(
-            self.data["bounded_citations"], "year", val_fn=len,
+            self.data["bounded_citations"],
+            "year",
+            val_fn=len,
         )
         return self.work_counts
 
 
-class TestProcessor:
-    def __init__(self):
-        pass
+def test_openalexprocessor():
+    processor = OpenAlexProcessor(TEST_WORKS)
+    processor.process_works()
 
-    @classmethod
-    def get_concepts(cls, work):
-        return [
-            {
-                "display_name": "Concept 1",
-                "counts_by_year": [
-                    {"year": 2009, "works_count": 7829.60, "cited_by_count": 141665.20},
-                ],
-            },
-        ]
+    author_data = processor.get_author_data()
+    assert author_data["https://openalex.org/I4210164937"][2016] == [
+        "https://openalex.org/A4344207660",
+        "https://openalex.org/A4358260579",
+        "https://openalex.org/A2119543935",
+        "https://openalex.org/A4358569165",
+    ]
+    assert author_data["https://openalex.org/I16733864"][2011] == [
+        "https://openalex.org/A4334906277",
+        "https://openalex.org/A4349829430",
+    ]
+    assert len(author_data["https://openalex.org/I4210164937"].keys()) == 1
+
+    author_counts = processor.get_author_counts() 
+    assert author_counts["https://openalex.org/I4210164937"].loc[2016] == 4
+
+    assert processor.get_individual_bounded_citations() == {
+        "https://openalex.org/I4210164937": np.array([
+            732 + 3131 + 7952 + 15243,
+        ]),
+        "https://openalex.org/I16733864": np.array([
+            1599 + 2320 + 2695,
+        ]),
+    }
+
+    bounded_citations = processor.get_bounded_citations()
+    assert bounded_citations["https://openalex.org/I4210164937"].loc[2016] == 732 + 3131 + 7952 + 15243
+
+    work_counts = processor.get_work_counts()
+    assert work_counts["https://openalex.org/I4210164937"].loc[2016] == 1
+    assert work_counts["https://openalex.org/I16733864"].loc[2011] == 1
+
+    selected_institution_ids = [
+        "https://openalex.org/I4210164937",
+    ]
+    processor = OpenAlexProcessor(TEST_WORKS, selected_institution_ids=selected_institution_ids)
+    processor.process_works()
+    author_data = processor.get_author_data()
+    assert "https://openalex.org/I4210164937" in author_data.keys()
+    assert len(author_data) == 1
+
+    institution_aliases = {"https://openalex.org/I4210164937": "Microsoft"}
+    processor = OpenAlexProcessor(TEST_WORKS, institution_aliases=institution_aliases)
+    processor.process_works()
+    author_data = processor.get_author_data()
+    assert "Microsoft" in author_data.keys()
+    assert "https://openalex.org/I16733864" in author_data.keys()
+
+
+if __name__ == "__main__":
+    test_openalexprocessor()
