@@ -1,7 +1,7 @@
 from collections import defaultdict
 import numpy as np
 
-from researcher_impact.citations import get_citation_count_in_first_years
+from researcher_impact.citations import get_bounded_citations
 from researcher_impact.utils import dicts_to_dataarrays
 from researcher_impact.test_works import TEST_WORKS
 
@@ -36,8 +36,8 @@ class OpenAlexProcessor:
 
     def process_authorships(self, work):
         pub_year = work["publication_year"]
-        bounded_citations = get_citation_count_in_first_years(
-            work, years=self.citation_year_bound
+        bounded_citations = get_bounded_citations(
+            work, year_bound=self.citation_year_bound
         )
         # For each work we'll need to check if citations are already added to a given
         # institution's list, because multiple authors may have the same affiliation
