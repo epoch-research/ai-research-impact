@@ -1212,4 +1212,54 @@ Unit tests for OpenAlexProcessor
   - And yet I have counted many citations in 2010 and 2011, for most institutions.
   - But the three year window might be enough to capture that.
   - **We should see what happens to 2010 and 2011 with a 0-year bound.**
-- 
+
+## Data quality issues
+
+- Can confirm: OpenAlex includes arXiv papers because it includes the "Language models are few-shot learners" arXiv paper.
+- GPT-3 paper has no OpenAI affiliations! So it doesn't get included in my processed data at all.
+  - Could we rectify this by looking people up?
+  - E.g. Match display name => search that name => consolidate to the most relevant search result
+  - Ok let's try an example.
+    - Tom Brown
+      - University of Oxford. Dang.
+    - OpenAI doesn't appear in first 25 search results for Tom Brown.
+    - Ok probably not a great first choice because it's such a common name.
+  - Girish Sastry
+    - That's a hit. OpenAI is the last known institution.
+    - Ok so maybe we could search, and if their last known institution is one of the aliases, go with that search result.
+  - Problem is, the Author object only has their last known institution, rather than the institution at the time.
+    - Ok so that's bad...
+  - What if we have a step after the initial processing...
+    - Go through the works again
+    - If an author name is already in `author_names_data`, then we can infer that they belonged to the given institution in the given year where we found that name.
+    - But the only way that would happen is if that author published another paper that year, where there affiliation was included.
+- There is a lot of author duplication!
+  - Could search for the author and consolidate to the first search result
+    - Maybe needs additional checks for common names - check that they've published in Artificial Intelligence?
+    - I don't think there's any way to be sure that you've found duplicates.
+    - But I think it's more important to _not_ have duplicate names for each institution, than it is for the Author ID to correspond to the actual person.
+
+```
+> institution_author_name_data['OpenAI'][2018]
+['Rafal Jozefowicz',
+ 'Phillip Isola',
+ 'Xue Bin Peng',
+ 'Marcin Andrychowicz',
+ 'Wojciech Zaremba',
+ 'Pieter Abbeel',
+ 'Bob McGrew',
+ 'Marcin Andrychowicz',
+ 'Wojciech Zaremba',
+ 'Phillip Isola',
+ 'Harrison Edwards',
+ 'Pieter Abbeel',
+ 'Josh Tobin',
+ 'Marcin Andrychowicz',
+ 'Bob McGrew',
+ 'Alex K. Ray',
+ 'Jonas Schneider',
+ 'Peter Welinder',
+ 'Wojciech Zaremba',
+ 'Phillip Isola',
+ 'Jonathan Raiman']
+```
