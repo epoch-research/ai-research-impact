@@ -1238,6 +1238,7 @@ Unit tests for OpenAlexProcessor
     - Maybe needs additional checks for common names - check that they've published in Artificial Intelligence?
     - I don't think there's any way to be sure that you've found duplicates.
     - But I think it's more important to _not_ have duplicate names for each institution, than it is for the Author ID to correspond to the actual person.
+  - OOPS. This was mostly due to a bug. There's actually only about 5% duplication.
 
 ```
 > institution_author_name_data['OpenAI'][2018]

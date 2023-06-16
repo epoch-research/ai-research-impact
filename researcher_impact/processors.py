@@ -24,12 +24,18 @@ class OpenAlexProcessor:
         self.individual_bounded_citations = None
         self.bounded_citations = None
         self.work_counts = None
+        self.author_id_to_name = dict()
 
     def process_works(self):
-        self.data = defaultdict(  # keys: data type
-            lambda: defaultdict(  # keys: institution
-                lambda: defaultdict(list)  # keys: year
-            )
+        self.data = {}
+        self.data["authors"] = defaultdict(  # keys: institution
+            lambda: defaultdict(set)  # keys: year
+        )
+        self.data["author_names"] = defaultdict(  # keys: institution
+            lambda: defaultdict(list)  # keys: year
+        )
+        self.data["bounded_citations"] = defaultdict(  # keys: institution
+            lambda: defaultdict(list)  # keys: year
         )
         for work in self.works:
             self.process_authorships(work)
@@ -71,8 +77,10 @@ class OpenAlexProcessor:
                     bounded_citations
                 )
                 bounded_citations_added[alias] = True
-            self.data["authors"][alias][pub_year].append(author_id)
-            self.data["author_names"][alias][pub_year].append(author_name)
+            if author_id not in self.data["authors"][alias][pub_year]:
+                self.data["author_names"][alias][pub_year].append(author_name)
+                self.author_id_to_name[author_id] = author_name
+            self.data["authors"][alias][pub_year].add(author_id)
 
     def get_author_data(self):
         return self.data["authors"]
