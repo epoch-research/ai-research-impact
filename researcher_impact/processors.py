@@ -29,12 +29,6 @@ class OpenAlexProcessor:
         )
 
     def process_works(self):
-        self.data["authors"] = defaultdict(  # keys: institution
-            lambda: defaultdict(set)  # keys: year
-        )
-        self.data["author_names"] = defaultdict(  # keys: institution
-            lambda: defaultdict(list)  # keys: year
-        )
         self.data["bounded_citations"] = defaultdict(  # keys: institution
             lambda: defaultdict(list)  # keys: year
         )
@@ -85,12 +79,17 @@ class OpenAlexProcessor:
                     bounded_citations
                 )
                 bounded_citations_added[alias] = True
-            if author_id not in self.data["authors"][alias][pub_year]:
-                self.data["author_names"][alias][pub_year].append(author_name)
+            # The below condition means we use the first id encountered for each author each year
+            if self.author_id_to_name[alias][pub_year].get(author_id) is None:
                 self.author_id_to_name[alias][pub_year][author_id] = author_name
-            self.data["authors"][alias][pub_year].add(author_id)
 
     def deduplicate_authors(self):
+        self.data["authors"] = defaultdict(  # keys: institution
+            lambda: defaultdict(set)  # keys: year
+        )
+        self.data["author_names"] = defaultdict(  # keys: institution
+            lambda: defaultdict(list)  # keys: year
+        )
         for alias, year_data in self.author_id_to_name.items():
             for pub_year, author_id_to_name in year_data.items():
                 unique_ids = set()
