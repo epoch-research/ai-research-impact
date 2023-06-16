@@ -1,5 +1,6 @@
 import numpy as np
 from pyalex import Authors, Institutions
+from tqdm import tqdm, trange
 
 TYPE_TO_PYALEX_CLASS = {
   'A': Authors,
@@ -20,14 +21,14 @@ def merge_pages(pager):
     a pager and then merge the pages.
     """
     items = []
-    for page in pager:
+    for page in tqdm(pager, unit="page"):
         items.extend(page)
     return items
 
 def merge_sample(query, sample_size=1000, seed=None):
     sampler = query.sample(sample_size, seed=seed)
     items = []
-    for i in range(int(np.ceil(sample_size / 200)) + 1):  # 200 is the max page size
+    for i in trange(int(np.ceil(sample_size / 200)) + 1):  # 200 is the max page size
         page = sampler.get(per_page=200, page=i+1)
         items.extend(page)
     return items
