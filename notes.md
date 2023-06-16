@@ -1165,3 +1165,51 @@ defaultdict(list,
     - Previously I was only considering citations of past works for the concept of Artificial Intelligence.
   - In fact, it might even make FWCI tractable, though that might be pointless.
     - Nah, FWCI still has to consider all the other fields. 
+
+## Ranking
+
+New rankings after bug fixes discussed above:
+
+```
+1. Google: 33.2%
+2. Microsoft: 13.7%
+3. Meta: 13.5%
+4. DeepMind: 12.9%
+5. OpenAI: 5.3%
+6. Alibaba: 2.1%
+7. Baidu: 2.0%
+8. NVIDIA: 1.6%
+9. Tencent: 1.5%
+10. Amazon: 1.5%
+11. Adobe Systems: 1.2%
+12. Huawei: 1.0%
+13. Group Sense: 0.6%
+14. https://openalex.org/I4210148872: 0.6%
+15. Naver: 0.5%
+16. Megvii: 0.4%
+17. Twitter: 0.4%
+18. Runway: 0.4%
+19. Stability: 0.4%
+20. Salesforce: 0.4%
+21. Xerox: 0.4%
+22. Netflix: 0.4%
+23. Yahoo: 0.3%
+24. Jingdong: 0.3%
+25. NEC: 0.2%
+...
+```
+
+- Same top 10, different order.
+- There's more aliasing I could have done but I think this is good enough.
+  - Could consider using GPT spreadsheet-style
+
+# 2023-Jun-16
+
+Unit tests for OpenAlexProcessor
+
+- Found a bug where if there are any spurious citation counts before the publication year (which there often are)
+- Also noticed that yearly counts seem to never be before 2012. This is problematic for measuring works and citations prior to 2012.
+  - And yet I have counted many citations in 2010 and 2011, for most institutions.
+  - But the three year window might be enough to capture that.
+  - **We should see what happens to 2010 and 2011 with a 0-year bound.**
+- 
