@@ -1264,3 +1264,19 @@ Unit tests for OpenAlexProcessor
  'Phillip Isola',
  'Jonathan Raiman']
 ```
+
+- Implementing consolidate-to-first-author-encountered solution
+- Looks good
+
+```
+Amazon: 1284 authors, 1284 unique authors (0.00% duplication)
+Microsoft: 7562 authors, 7562 unique authors (0.00% duplication)
+Nvidia: 921 authors, 921 unique authors (0.00% duplication)
+OpenAI: 80 authors, 80 unique authors (0.00% duplication)
+Tencent: 1360 authors, 1360 unique authors (0.00% duplication)
+DeepMind: 1021 authors, 1021 unique authors (0.00% duplication)
+Alibaba: 1571 authors, 1571 unique authors (0.00% duplication)
+Meta: 2327 authors, 2327 unique authors (0.00% duplication)
+Baidu: 1105 authors, 1105 unique authors (0.00% duplication)
+Google: 8252 authors, 8252 unique authors (0.00% duplication)
+```

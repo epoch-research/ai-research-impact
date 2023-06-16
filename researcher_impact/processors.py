@@ -19,15 +19,16 @@ class OpenAlexProcessor:
         self.institution_aliases = institution_aliases
         self.citation_year_bound = citation_year_bound
 
-        self.data = None
+        self.data = {}
         self.author_counts = None
         self.individual_bounded_citations = None
         self.bounded_citations = None
         self.work_counts = None
-        self.author_id_to_name = dict()
+        self.author_id_to_name = defaultdict(  # keys: institution
+            lambda: defaultdict(dict)  # keys: year
+        )
 
     def process_works(self):
-        self.data = {}
         self.data["authors"] = defaultdict(  # keys: institution
             lambda: defaultdict(set)  # keys: year
         )
@@ -39,6 +40,13 @@ class OpenAlexProcessor:
         )
         for work in self.works:
             self.process_authorships(work)
+        self.deduplicate_authors()
+        self.run_checks()
+
+    def run_checks(self):
+        for alias, year_data in self.data["authors"].items():
+            for year, author_ids in year_data.items():
+                assert len(author_ids) == len(self.data["author_names"][alias][year])
 
     def process_authorships(self, work):
         pub_year = work["publication_year"]
@@ -79,8 +87,20 @@ class OpenAlexProcessor:
                 bounded_citations_added[alias] = True
             if author_id not in self.data["authors"][alias][pub_year]:
                 self.data["author_names"][alias][pub_year].append(author_name)
-                self.author_id_to_name[author_id] = author_name
+                self.author_id_to_name[alias][pub_year][author_id] = author_name
             self.data["authors"][alias][pub_year].add(author_id)
+
+    def deduplicate_authors(self):
+        for alias, year_data in self.author_id_to_name.items():
+            for pub_year, author_id_to_name in year_data.items():
+                unique_ids = set()
+                encountered_names = set()
+                for id_, name in author_id_to_name.items():
+                    if name not in encountered_names:
+                        unique_ids.add(id_)
+                        encountered_names.add(name)
+                self.data["authors"][alias][pub_year] = unique_ids
+                self.data["author_names"][alias][pub_year] = list(encountered_names)
 
     def get_author_data(self):
         return self.data["authors"]
