@@ -1,6 +1,8 @@
+.DS_Store
+
 *.pyc
 *.png
-.DS_Store
+*.svg
 
 data/
 settings.json
