@@ -1280,3 +1280,190 @@ Meta: 2327 authors, 2327 unique authors (0.00% duplication)
 Baidu: 1105 authors, 1105 unique authors (0.00% duplication)
 Google: 8252 authors, 8252 unique authors (0.00% duplication)
 ```
+
+# 2023-Jun-22
+
+## Measuring OpenAlex data lag
+
+### OpenAlex snapshots
+
+Taking stock
+
+- https://docs.openalex.org/download-all-data/openalex-snapshot 
+- When are snapshots dated?
+  - Updated about once per month
+  - https://github.com/ourresearch/openalex-guts/blob/main/files-for-datadumps/standard-format/RELEASE_NOTES.txt
+  - First release: RELEASE 2022-01-02
+    - Possibly not a complete snapshot, or not as complete as the later snapshots. Something to investigate.
+    - This is good news if the snapshot is complete enough. We have more than one year to backtrack to.
+  - But in the actual S3 bucket, author snapshots only go back to March 2023: https://openalex.s3.amazonaws.com/browse.html#data/authors/
+    - Oh, `updated_date` isn't what I thought it was. Each `updated_date` folder has the _changes_ on top of the previous `updated_date`. Like a diff. Except the previous `updated_date` is also changed to remove the records that changed...
+- How is the data structured?
+  - "The snapshot consists of five files (split into smaller files for convenience), with one file for each of our five entity types. The files are in the JSON Lines format; each line is a JSON object, exactly the same as you'd get from our API."
+- How big is the snapshot?
+  - "The gzip-compressed snapshot takes up about 330 GB and decompresses to about 1.6 TB."
+  - I have about 100GB available on my laptop, so I can't download the whole thing.
+- Could also consider OpenAlex data that has been downloaded by others, if accessing older snapshots isn't possible, or the storage requirements are unworkable.
+  - Tamay was using some other snapshot, let's check that notebook
+
+Comparing Experimental AI Corpus with current OpenAlex
+
+- See https://epochai.slack.com/archives/C052LFSD17W/p1687443457674329
+- Data looks similar up to and including 2021, but I expected a dropoff in EAC data in 2021 similar to the dropoff in current OpenAlex data in 2022. I don't observe such a dropoff.
+  - My model for what's going on was that there is a lag in getting data, which reduces the amount of data available for current_year - 1.
+- Hypothesis: false positives or duplicates were reduced by some method in 2022, but this was not applied retroactively.
+  - But it seems unlikely that they wouldn't apply it retroactively.
+- Check out the OpenAlex snapshot release notes: https://github.com/ourresearch/openalex-guts/blob/e6cb16bc6f1eab74aeb63d3d51b446531f9669ee/files-for-datadumps/standard-format/RELEASE_NOTES.txt
+  - Evidence of data removal
+
+```
+RELEASE 2022-09-16
+[...]
+- removed 700 thousand duplicate Authors
+
+RELEASE 2022-08-09
+- [...] merged 1M sets of works with the same DOI.
+
+RELEASE 2022-07-09
+[...]
+- removed duplicate Authors and Works
+```
+
+  - But this isn't evidence of the data removal _only_ being applied to 2022 publications.
+
+Ask the OpenAlex team?
+
+Look at underlying sources
+
+- Oh yeah, I forgot! MAG was apparently retired at the end of 2021!
+  - https://www.microsoft.com/en-us/research/project/academic/
+  - "Editor’s note, May 4, 2021 – In a recent blog post, it was announced the Microsoft Academic website and underlying APIs will be retired on Dec. 31, 2021."
+- David: Is it easy to see where info has been sourced from? i.e. could you easily get an idea how many of the pre-2022 works came from MAG?
+  - OpenAlex has a Sources API
+- Looking at `Sources().get()`
+  - All sources have an 'ids' field
+    - Some 'ids' fields in turn have a 'mag' field. What does that mean? My guess is that it means it comes from MAG.
+    - Examples:
+
+```
+  'ids': {'openalex': 'https://openalex.org/S2764455111',
+   'mag': '2764455111',
+   'wikidata': 'https://www.wikidata.org/entity/Q229883'},
+
+  'ids': {'openalex': 'https://openalex.org/S4210172589',
+   'issn_l': '1556-5068',
+   'issn': ['1556-5068'],
+   'wikidata': 'https://www.wikidata.org/wiki/Q7550801',
+   'fatcat': 'https://fatcat.wiki/container/tol7woxlqjeg5bmzadeg6qrg3e'},
+
+  'ids': {'openalex': 'https://openalex.org/S4306401840',
+   'wikidata': 'https://www.wikidata.org/wiki/Q56101155'},
+
+  'ids': {'openalex': 'https://openalex.org/S4306463937'},
+```
+
+- I don't know if having a 'mag' ID necessarily means that all data retrieved for this source comes from MAG. After all, there are often multiple IDs, so the data might come from any of them.
+- https://docs.openalex.org/api-entities/sources/get-a-single-source#external-ids
+  - The only external IDs are ISSN, Fatcat, MAG, and Wikidata.
+  - ISSN is also listed as a source that OpenAlex uses: https://openalex.org/about
+- Still...
+- Bingo
+
+```
+% of works with MAG IDs
+2010: 86%
+2011: 88%
+2012: 89%
+2013: 87%
+2014: 86%
+2015: 88%
+2016: 88%
+2017: 84%
+2018: 85%
+2019: 83%
+2020: 81%
+2021: 69%
+2022: 5%
+
+% of works with PubMed IDs
+2010: 11%
+2011: 11%
+2012: 14%
+2013: 13%
+2014: 13%
+2015: 13%
+2016: 13%
+2017: 12%
+2018: 12%
+2019: 15%
+2020: 14%
+2021: 19%
+2022: 20%
+```
+
+- Now I want to know - what does the presence of a MAG ID mean? I don't think it necessarily means that the work wouldn't be there if not for MAG. Because there is probably some redundancy.
+- How can I measure redundancy?
+
+Measuring redundancy of sources
+
+- I think we can get an imperfect but decent measure by measuring the frequency at which there are at least two of MAG, ISSN, Wikidata, Fatcat in the source IDs.
+  - But Sources are things like journals. A journal itself might have multiple IDs, while specific works from that journal do not.
+    - But if a Source is getting data from a Journal, it should know about all the works from the Journal.
+      - Depends how direct the source is.
+
+Imputation
+
+- Getting a sample of AI/ML works first, so it's more domain-specific adjustment
+- Fraction of MAG IDs looks very similar to all-fields sample
+  - Nevermind, typo - see below.
+- But why are the samples quite uniform in total work count across the years? Is uniform sampling a feature?
+- Testing if the distribution across years is any different when I fetch a non-random sample (the first 9,000 works returned by paginate)
+  - Oops, nah. I just forgot to change a variable name. D'oh.
+
+MAG fraction:
+
+```
+array([0.98758278, 0.99089253, 0.98365679, 0.99205448, 0.98086124,
+       0.99505562, 0.99186047, 0.99204545, 0.98982558, 0.99380165,
+       0.97382199, 0.97368421, 0.7       ])
+```
+
+PubMed fraction:
+
+```
+array([0.42549669, 0.40983607, 0.4473953 , 0.415437  , 0.3923445 ,
+       0.36464771, 0.3372093 , 0.3125    , 0.3502907 , 0.34090909,
+       0.40314136, 0.48684211, 0.3       ])
+```
+
+- Ok. Similar basic story, but very different fractions. The drop is merely to 0.7.
+- Super high MAG fractions for AI/ML works! And these would tend to be top-cited works, I think.
+- I guess top-cited works are more likely to have redundant sources.
+
+Total counts:
+```
+array([1208., 1098.,  979.,  881.,  836.,  809.,  860.,  880.,  688.,
+        484.,  191.,   76.,   10.])
+```
+
+- Makes sense because top-cited works are more likely to be older. In fact it's interesting that the effect still shows up in this case.
+- Let's go back to the random sample now...
+- Ok, with random sample the ratios are pretty similar to the all-fields sample.
+
+```
+array([0.95131846, 0.95042735, 0.94940978, 0.95392491, 0.96097561,
+       0.94072948, 0.95924765, 0.90372671, 0.92032967, 0.904474  ,
+       0.90434783, 0.773746  , 0.05387205])
+```
+
+- Plus, the total number of works is trending up until 2022, as expected. There's a dip in 2020 but that could just be noise.
+
+Imputation
+
+- The method I'm trying first is to take the ratio of:
+  - Average ratio of MAG IDs to total works from 2010 to 2020
+  - Ratio of MAG IDs to total works in 2021, and 2022
+- Then multiply the data (e.g. author count) by that ratio, in each of 2021 and 2022
+- Result:
+  - 2022 looks too big. Maybe like 3x too big based on the past trend.
+  - 
