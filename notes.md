@@ -1466,4 +1466,486 @@ Imputation
 - Then multiply the data (e.g. author count) by that ratio, in each of 2021 and 2022
 - Result:
   - 2022 looks too big. Maybe like 3x too big based on the past trend.
+
+# 2023-Jun-26
+
+## Can I use the Experimental AI Corpus to filter works? How long will that take?
+
+- Actually, this should be easy and fast. List of IDs from EAC. IDs are stored locally once I load the dataset. So just filter everything locally!
+- EAC data goes up to end of 2021
+- After filtering, 17343 works compared to 47625 works before that.
+- Hmm. I think it's missing too many true positives based on the below result:
+
+```python
+for work in works[:100]:
+    if work['id'] not in eac_work_ids and work['publication_year'] < 2022:
+        print(work['title'])
+```
+
+```
+SciPy 1.0: fundamental algorithms for scientific computing in Python
+The Pascal Visual Object Classes (VOC) Challenge
+DeepLab: Semantic Image Segmentation with Deep Convolutional Nets, Atrous Convolution, and Fully Connected CRFs
+Highly accurate protein structure prediction with AlphaFold
+MobileNetV2: Inverted Residuals and Linear Bottlenecks
+Scikit-learn: Machine Learning in Python
+Deep Neural Networks for Acoustic Modeling in Speech Recognition: The Shared Views of Four Research Groups
+Array programming with NumPy
+FaceNet: A unified embedding for face recognition and clustering
+Overview of the High Efficiency Video Coding (HEVC) Standard
+Mastering the game of Go without human knowledge
+Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition
+Google Earth Engine: Planetary-scale geospatial analysis for everyone
+Learning Spatiotemporal Features with 3D Convolutional Networks
+Robust principal component analysis?
+Quo Vadis, Action Recognition? A New Model and the Kinetics Dataset
+3D Convolutional Neural Networks for Human Action Recognition
+Encoder-Decoder with Atrous Separable Convolution for Semantic Image Segmentation
+Image Super-Resolution Via Sparse Representation
+Adaptive Subgradient Methods for Online Learning and Stochastic Optimization
+Guided Image Filtering
+Single Image Haze Removal Using Dark Channel Prior
+LINE
+Deformable Convolutional Networks
+Natural Language Processing (Almost) from Scratch
+...
+Deep Compression: Compressing Deep Neural Networks with Pruning, Trained Quantization and Huffman Coding
+Searching for MobileNetV3
+CIDEr: Consensus-based image description evaluation
+Accurate, Dense, and Robust Multiview Stereopsis
+```
+
+- Still, this is something we could use to check the robustness of our conclusions.
+
+## Implementing additional metrics
+
+Work-by-work author count
+
+- Should I count the number of people with the same affiliation, or the number of people on the paper?
+  - The latter is going to be more robust.
+  - Why not both, then we can check how the numbers shake out. My guess is that the former is going to yield low, noisy counts.
+
+# 2023-Jul-04
+
+## Setting environment back up
+
+- Install conda
+  -   
+- Set up `epoch` environment
+
+# 2023-Jul-18
+
+- Making short letter version of report
+
+## Distribution of authors found per paper
+
+- Not currently getting this data
+- We're iterating papers. So we'll know all the affiliated authors once we're done processing a given paper.
+- We just need to have a data structure that bundles the affiliated authors by paper.
+  - `dict<institution, dict<work_id, set<work_authors_affiliated_with_institution>>>`
+- Hmm
+- Distribution is very wide
+- Mean is 2.3 authors per institution per paper. That is closer to my intuition than 1 author per institution.
+- Looking at outliers - >50 authors
+  - Paper on augmented reality from Microsoft - probably not AI
+  - Paper on hardware-software co-design for deep learning from Meta - legit
+  - Paper on quantum computing from Google - probably not AI
+    - Two of these in fact
+  - Deep speech 2 - legit AI paper from Baidu - but I only count 32 authors on the arxiv PDF, rather than 69
+    - Apparent misattributions, e.g. Bin Yuan
+    - Ah, but the PLMR version does have 69 authors: http://proceedings.mlr.press/v48/amodei16.html 
+- What does this mean? I feel like this doesn't square with the number of publications
+- _Unique_ authors...does that matter here?
+  - The same author can appear on more than one work per year
+
+# 2023-Jul-19
+
+## Single-affiliated authors check
+
+- Random sample of 10 works with one affiliated author found
+  - [PASS] https://openalex.org/W3026508739
+    - [PASS] 1 author from Alibaba
+    - [PASS] AI
+      - Doesn't seem like Deep Learning, but has planning algorithms for autonomous vehicles, so I'd count it as AI.
+  - [FAIL] https://openalex.org/W3018307512
+    - [FAIL] 2 authors from Alibaba
+      - OpenAlex incorrectly affiliates Daoyuan Chen with Peking University; should be Alibaba
+      - OpenAlex correctly affiliates Yaliang Li with Alibaba
+      - OpenAlex incorrectly affiliates Ying H. Shen with Peking University
+    - [PASS] ML
+      - Entity and relation extraction; talks about training models
+  - [PASS] https://openalex.org/W3112458135
+    - [PASS] 1 author from Alibaba
+    - [PASS] AI
+      - Involves a Bayesian network - close enough
+  - https://openalex.org/W3111342233
+- Meta: suspicious that the first 4 samples are Alibaba.
+  - Could be that most of the single-author cases are Alibaba?
+- New sample
+  - [FAIL] https://openalex.org/W2806128650
+    - [FAIL] All 6 authors should be Alibaba, but OpenAlex only finds Luo Si
+    - [PASS] ML
+      - Involves neural network
+  - [PASS] https://openalex.org/W4327644595
+    - [PASS] 1 author from Alibaba
+    - [PASS] ML
+      - Involves neural network
+  - [PASS] https://openalex.org/W2991451943
+    - [PASS] 1 author from Alibaba
+    - [PASS] ML
+      - Involves attention mechanism
+  - [PASS] https://openalex.org/W3103338449
+    - [PASS] 1 author from Alibaba
+    - [PASS] ML
+      - Involves neural network
+  - [PASS] https://openalex.org/W4206473782
+    - [PASS] 1 author from Alibaba
+    - [PASS] ML
+      - Involves RL
+  - [PASS] https://openalex.org/W3105000568
+    - [PASS] 1 author from Alibaba
+- Ugh, I still messed up. All Alibaba.
+- Sample #3
+  - [PASS] https://openalex.org/W2977955221
+    - [PASS] 1 author from Microsoft Research Asia
+    - [PASS] ML
+      - Involves CNNs
+  - [FAIL] https://openalex.org/W2913676469
+    - [FAIL] All from Rakuten Institute of Technology, but one listed as Amazon
+      - Was previously Amazon: https://www.difabbrizio.com/
+    - [PASS] ML
+      - Involves RNNs
+  - [PASS] https://openalex.org/W3111145724
+    - [PASS] 1 author from Amazon
+    - [PASS] AI
+      - Borderline - uses prediction algorithms
+  - [PASS] https://openalex.org/W2963811641
+    - [PASS] 1 author from FAIR (now MAIR)
+    - [PASS] ML
+      - Involves GANs
+  - [PASS] https://openalex.org/W2144058993
+    - [PASS] 1 author from Microsoft Research Cambridge
+    - [FAIL] CS
+      - Doesn't sound like anything that could be called "AI"
+      - But not completely off
+  - [PASS] https://openalex.org/W3046888428
+    - [PASS] 1 author from Alibaba
+    - [PASS] ML
+      - RNNs
+  - [PASS] https://openalex.org/W1913744585
+    - [PASS] 1 author from Google Research
+    - [FAIL] Stats
+      - Doesn't sound like anything that could be called "AI"
+      - But not completely off
+  - [PASS] https://openalex.org/W4221156617
+    - [PASS] 1 author from Tencent
+    - [PASS] ML
+      - Involves deep learning
+  - [PASS] https://openalex.org/W4375948571
+    - [PASS] 1 author from Google
+    - [PASS] ML
+      - Sounds like a lit review of ML applied to health
+  - [PASS] https://openalex.org/W4312903731
+    - [PASS] 1 author from Amazon
+    - [PASS] ML
+      - GNN
+- Summary:
+  - 9/10 correctly affiliated single author
+    - Other samples: 5/6 and 2/3
+  - 8/10 correctly labeled as AI/ML
+    - Other samples: 3/3 and 5/5
+
+## AI/ML labeling check
+
+Random sample of 10
+
+- [PASS] https://openalex.org/W4312191413
+  - Machine learning mentioned
+- [PASS] https://openalex.org/W2964046272
+  - Statistical learning
+- [PASS] https://openalex.org/W2402827806
+  - "training a speech translation system"
+- [PASS] https://openalex.org/W3130665016
+  - "Self-supervised learning"
+- [PASS] https://openalex.org/W3123614573
+  - "supervised learning"
+- [PASS] https://openalex.org/W2105103433
+  - "semi-supervised learning"
+- [PASS] https://openalex.org/W4226028923
+  - "Vision transformer"
+- [PASS] https://openalex.org/W3175300676
+  - "Self-supervised learning"
+- [PASS] https://openalex.org/W3214495016
+  - "Transfer learning"
+- [FAIL] https://openalex.org/W2810972835
+  - "This proposal deals with the mechanisms of the navigation technologies used to develop the 2-Dimensional and 3-Dimensional models."
+  - Doesn't sound like AI
+
+
+## OpenAI reliability check
+
+Full sample, default order.
+
+- https://openalex.org/W2618530766
+  - Debatable affiliation. Ilya Sutskever was at OpenAI at the time of publication for this version of the paper (2017). But Ilya Sutskever was not at OpenAI at the time of publication for the original version of the paper (2012).
+- https://openalex.org/W2962785568
+  - Affiliates Phillip Isola
+  - Paper published in 2018
+  - Phillip Isola contributed to this blog post from October 2018: https://openai.com/research/reinforcement-learning-with-prediction-based-rewards
+  - December 2017: "Phillip Isola will join the [MIT] Department of Electrical Engineering and Computer Science as an assistant professor in July 2018...Currently a fellow at OpenAI..."
+  - Passable
+- Just browsing titles now
+  - There are 64 in total, including 2023
+- False positives:
+  - A machine’s perspective https://doi.org/10.3997/1365-2397.fb2023046
+    - ChatGPT credited to OpenAI
+  - Does GPT-3 qualify as a co-author of a scientific paper publishable in peer-review journals according to the ICMJE criteria? - A Case Study. https://doi.org/10.21203/rs.3.rs-2404314/v1 ['https://openalex.org/A4315473491']
+    - GPT is listed as an author, affiliated with OpenAI
+      - I mean, this could actually count. This could be the future of paper-writing. This will reflect some of the research labour at OpenAI in future.
+- False negatives:
+  - Language models are few-shot learners
+    - This is in OpenAlex, but missing any affiliation
+  - Scaling laws
+  - 
+- Sense check: OpenAI research index
+  - https://openai.com/research?topics=adversarial-examples,audio-generation,compute,computer-vision,contrastive-learning,domain-randomization,dota-2,environments,exploration,games,generative-models,human-feedback,image-generation,interpretability,language,memory,meta-learning,multi-agent,open-source,policy-optimization,procedural-generation,reasoning,reinforcement-learning,representation-learning,research,robotics,robustness,scaling-properties,self-play,sim-to-real,software-engineering,sparsity,speech-recognition,summarization,supervised-learning,transfer-learning,transformers,unsupervised-learning&contentTypes=publication
+  - 113 listed when filtering out "safety & alignment" and "responsible AI"
+  - 163 in total (no filters)
+- Method we could use to add false negatives:
+  - Scrape all the paper URLs from openai.com/research
+  - For each paper URL, search OpenAlex for a match
+  - Accept the first match if the relevance score is over some threshold (not sure what threshold)
+  - Working on this, but taking a while to handle Javascript pagination.
+  - Probably faster to just copy-paste every HTML.
+
+Rejects
+
+```
+Original title:  Language models can explain neurons in language models
+Search result title:  RECEPTIVE FIELDS AND FUNCTIONAL ARCHITECTURE IN TWO NONSTRIATE VISUAL AREAS (18 AND 19) OF THE CAT
+Relevance score:  183.50458
+Match score:  3.7630586132250228
+
+Original title:  Frontier AI Regulation: Managing Emerging Risks to Public Safety
+Search result title:  Bounded Rationality and Organizational Learning
+Relevance score:  117.12347
+Match score:  3.524775887675073
+
+Original title:  Self-critiquing models for assisting human evaluators
+Search result title:  The Role of Debriefing in Simulation-Based Learning
+Relevance score:  67.881134
+Match score:  2.0000079256679766
+
+Original title:  Activation Atlas
+Search result title:  MAP kinase in situ activation atlas during <i>Drosophila</i> embryogenesis
+Relevance score:  1023.1317
+Match score:  59.75997266773872
+
+Original title:  Scaling Laws for Reward Model Overoptimization
+Search result title:  From initial idea to unique advantage: The entrepreneurial challenge of constructing a resource base
+Relevance score:  17.621124
+Match score:  0.6890404743301375
+
+Original title:  Let's Verify Step by Step
+Search result:  The Essential Guide to Semiconductors
+https://openalex.org/W612923280
+Relevance score:  27.246555
+Match score:  4.8936257399641345
+
+Original title:  Generative Language Models and Automated Influence Operations: Emerging Threats and Potential Mitigations
+Search result:  Emergent by Design: Performance and Transformation at Infosys Technologies
+https://openalex.org/W1988667557
+Relevance score:  19.248081
+Match score:  1.6881683797321263
+
+Original title:  Evolution through Large Models
+Search result:  Dynamic topic models
+https://openalex.org/W2072644219
+Relevance score:  221.00365
+Match score:  5.193261855393698
+
+Original title:  Formal Mathematics Statement Curriculum Learning
+Search result:  Learning Styles and Learning Spaces: Enhancing Experiential Learning in Higher Education
+https://openalex.org/W2147454772
+Relevance score:  62.167454
+Match score:  1.114540335250958
+```
+
+Accepts with low relevance scores
+
+```
+Original title:  Measuring the Algorithmic Efficiency of Neural Networks
+Search result title:  Measuring the Algorithmic Efficiency of Neural Networks.
+Relevance score:  644.3169
+Match score:  147.81643445870534
+
+Original title:  A Hazard Analysis Framework for Code Synthesis Large Language Models
+Search result title:  A Hazard Analysis Framework for Code Synthesis Large Language Models
+Relevance score:  197.26831
+Match score:  197.26831
+
+Original title:  Extensions and Limitations of the Neural GPU
+Search result title:  Extensions and Limitations of the Neural GPU
+Relevance score:  396.24777
+Match score:  177.20738993054036
+
+Original title:  Understanding the Capabilities, Limitations, and Societal Impact of Large Language Models
+Search result title:  Understanding the Capabilities, Limitations, and Societal Impact of Large Language Models.
+Relevance score:  671.98834
+
+Original title:  AI Safety Needs Social Scientists
+Search result title:  AI Safety Needs Social Scientists
+Relevance score:  883.25287
+
+Original title:  Efficient Training of Language Models to Fill in the Middle
+Search result title:  Efficient Training of Language Models to Fill in the Middle
+Relevance score:  304.83688
+
+Original title:  Teaching Models to Express Their Uncertainty in Words
+Search result title:  Teaching Models to Express Their Uncertainty in Words
+Relevance score:  241.08252
+
+Original title:  Learning Policy Representations in Multiagent Systems
+Search result title:  Learning Policy Representations in Multiagent Systems
+Relevance score:  895.31226
+
+Original title:  WebGPT: Browser-assisted question-answering with human feedback
+Search result title:  WebGPT: Browser-assisted question-answering with human feedback
+Relevance score:  493.95328
+
+Original title:  Text and Code Embeddings by Contrastive Pre-Training
+Search result title:  Text and Code Embeddings by Contrastive Pre-Training
+Relevance score:  204.86462
+Match score:  204.86462
+
+Original title:  Training Verifiers to Solve Math Word Problems
+Search result title:  Training Verifiers to Solve Math Word Problems
+Relevance score:  292.2497
+
+Original title:  Transfer of Adversarial Robustness Between Perturbation Types
+Search result title:  Transfer of Adversarial Robustness Between Perturbation Types.
+Relevance score:  819.5312
+```
+
+# 2023-Jul-20
+
+Checking Microsoft having similar number of publications all the time
+
+- Confirming work counts
+
+```
+2010 977
+2011 1015
+2012 1065
+2013 1168
+2014 1133
+2015 1051
+2016 1092
+2017 1113
+2018 1300
+2019 1616
+2020 1887
+2021 1937
+2022 946
+2023 363
+```
+
+- Looks kinda legit
+
+```python
+rng.choice(works_by_year[2010], 10)
+[work["title"] for work in works_sample]
+
+# Output:
+
+['Near-Strong Equilibria in Network Creation Games',
+ 'Automatic verification of Java programs with dynamic frames',
+ 'Discovering frequent patterns in sensitive data',
+ '10421 Summary - Model-Based Testing in Practice.',
+ 'Affine Invariant Topic Model for Generic Object Recognition',
+ 'Analyzing bandit-based adaptive operator selection mechanisms',
+ 'Efficiently learning mixtures of two Gaussians',
+ 'Compress Compound Images in H.264/MPGE-4 AVC by Exploiting Spatial Correlation',
+ 'Image deblurring using inertial measurement sensors',
+ 'Session details: Research track 18: ranking and multi-label learning']
+
+# 2014:
+
+['A new Neural Network based logistic regression classifier for improving mispronunciation detection of L2 language learners',
+ 'Dynamic joint outage identification and state estimation in power systems',
+ 'Bilu-linial stable instances of max cut and minimum multiway cut',
+ 'Keynote Address 1: Some Recent Research Results on Boosting Gadget Battery Life',
+ 'A computational approach to measuring the correlation between expertise and social media influence for celebrities on microblogs',
+ 'Safe zero-cost coercions for Haskell',
+ 'Pre-Trained Multi-View Word Embedding Using Two-Side Neural Network',
+ 'Analyze this! 145 questions for data scientists in software engineering',
+ 'On the Convergence of Stochastic Variational Inference in Bayesian Networks',
+ 'Black-box obfuscation for d-CNFs']
+
+# 2018:
+
+['Boosting Information Spread: An Algorithmic Approach',
+ 'High-order Proximity Preserving Information Network Hashing',
+ 'Weighted Rate-Distortion Optimization for Screen Content Coding',
+ 'Multi-Task Neural Models for Translating Between Styles Within and Across Languages',
+ 'Deep Attention Neural Tensor Network for Visual Question Answering',
+ 'Neural Architecture Optimization',
+ 'Stochastic Answer Networks for Natural Language Inference',
+ 'M-Walk: Learning to Walk over Graphs using Monte Carlo Tree Search',
+ 'MiCT: Mixed 3D/2D Convolutional Tube for Human Action Recognition',
+ 'Learning deep representations by mutual information estimation and maximization']
+
+# 2022:
+
+['Exploring and evaluating personalized models for code generation',
+ 'Towards Proactively Forecasting Sentence-Specific Information Popularity within Online News Documents',
+ 'Efficient and Stable Information Directed Exploration for Continuous Reinforcement Learning',
+ 'Bringing Old Films Back to Life',
+ 'Learning Models of Individual Behavior in Chess',
+ 'Integrating ANFIS and Qt Framework to Develop a Mobile-Based Typhoon Rainfall Forecasting System',
+ 'App usage on-the-move: Context- and commute-aware next app prediction',
+ 'Question-aware transformer models for consumer health question summarization',
+ 'RSTT: Real-time Spatial Temporal Transformer for Space-Time Video Super-Resolution',
+ 'CERT: Continual Pre-training on Sketches for Library-oriented Code Generation']
+```
+
+- Maybe there's more false-positives in earlier years.
+- But maybe I also am worse at recognising what was "AI" in earlier years.
+- Papers that I'm _confident_ are AI/ML from the title
+  - 2010: 5/10
+  - 2014: 4/10
+  - 2018: 7/10
+  - 2022: 7/10
+- Earlier years included:
+
+```
+2000 207
+2001 225
+2002 405
+2003 376
+2004 419
+2005 546
+2006 652
+2007 674
+2008 830
+2009 915
+2010 977
+2011 1015
+2012 1065
+2013 1168
+2014 1133
+2015 1051
+2016 1092
+2017 1113
+2018 1300
+2019 1616
+2020 1887
+2021 1937
+2022 946
+2023 363
+```
+
+## New charts
+
+- Phase plot
   - 
