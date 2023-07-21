@@ -38,3 +38,8 @@ def set_default_fig_layout(fig, xtickvals, xticktext, ytickvals, yticktext):
         margin=dict(l=100, r=30, t=80, b=80),
     )
     return fig
+
+
+def save_plot(fig, folder, filename, extensions=['png', 'svg'], scale=2):
+    for ext in extensions:
+        fig.write_image(folder + filename + '.' + ext, scale=scale)
