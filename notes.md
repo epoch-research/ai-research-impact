@@ -1948,4 +1948,144 @@ rng.choice(works_by_year[2010], 10)
 ## New charts
 
 - Phase plot
-  - 
+
+# 2023-Jul-26
+
+## Bootstrapping
+
+- How
+- Need resampling of the data.
+- Resample all works? Or resample by company?
+- How to easily hook this in?
+- I think the easiest thing is to separate into steps: (a) sampling, (b) statistics of the sample
+  - (a) sampling
+    - For `result = func(data)`, we want to add a wrapper like so:
+    - Actually I'll just mock this in the code file.
+- I'm thinking we should just handle the specific case of a list of dict of instition => data
+
+### Bootstrap CI results
+
+- Sample size 100
+  - For reference, any given Work in the original dataset has about a 63% chance of appearing in a given member of this sample. (1 - 1/e ~= 63%; the limit as dataset size approaches infinity).
+
+Average unique authors per year:
+
+```
+{'Google': {'mean': 770.1428571428571,
+  'median': 770.1428571428571,
+  'std': 0.5714285714285552,
+  'ci': array([ 7.70e+02,  7.71e+02])},
+  'Tencent': {'mean': 198.03571428571428,
+  'median': 198.03571428571428,
+  'std': 3.25,
+  'ci': array([ 1.95e+02,  2.01e+02])},
+  'Microsoft': {'mean': 738.1071428571429,
+  'median': 738.1071428571429,
+  'std': 5.678571428571445,
+  'ci': array([ 7.33e+02,  7.43e+02])},
+  'Meta': {'mean': 233.32142857142856,
+  'median': 233.32142857142856,
+  'std': 2.035714285714292,
+  'ci': array([ 2.31e+02,  2.35e+02])},
+  'Nvidia': {'mean': 109.35714285714286,
+  'median': 109.35714285714286,
+  'std': 1.0,
+  'ci': array([ 1.08e+02,  1.10e+02])},
+  'Baidu': {'mean': 129.17857142857144,
+  'median': 129.17857142857144,
+  'std': 0.392857142857153,
+  'ci': array([ 1.29e+02,  1.30e+02])},
+  'Amazon': {'mean': 223.46428571428572,
+  'median': 223.46428571428572,
+  'std': 0.5357142857142918,
+  'ci': array([ 2.23e+02,  2.24e+02])},
+  'Alibaba': {'mean': 253.70054945054946,
+  'median': 253.70054945054946,
+  'std': 9.914835164835182,
+  'ci': array([ 2.45e+02,  2.63e+02])},
+  'DeepMind': {'mean': 102.875,
+  'median': 102.875,
+  'std': 0.7916666666666714,
+  'ci': array([ 1.02e+02,  1.04e+02])},
+  'OpenAI': {'mean': 7.035714285714286,
+  'median': 7.035714285714286,
+  'std': 0.5357142857142856,
+  'ci': array([ 6.55e+00,  7.52e+00])}}
+```
+
+- Generally very low variation
+- OpenAI is the most uncertain but the number of authors is very low to begin with
+
+Average citation metric per year
+
+```
+{'Meta': {'mean': 14764.663571428573,
+  'median': 14661.25,
+  'std': 1452.6431890605413,
+  'ci': array([ 1.28e+04,  1.74e+04])},
+  'Google': {'mean': 33572.588571428576,
+  'median': 33301.107142857145,
+  'std': 2141.1214653064217,
+  'ci': array([ 3.04e+04,  3.75e+04])},
+  'Alibaba': {'mean': 2798.211813186813,
+  'median': 2780.75,
+  'std': 145.49491691655044,
+  'ci': array([ 2.59e+03,  3.05e+03])},
+  'Nvidia': {'mean': 3518.3657142857137,
+  'median': 3485.607142857143,
+  'std': 436.78606439420616,
+  'ci': array([ 2.79e+03,  4.28e+03])},
+  'Tencent': {'mean': 3880.2943406593404,
+  'median': 3881.535714285714,
+  'std': 186.7684319859331,
+  'ci': array([ 3.57e+03,  4.20e+03])},
+  'Microsoft': {'mean': 24529.83357142858,
+  'median': 24323.571428571428,
+  'std': 2054.2339398665113,
+  'ci': array([ 2.16e+04,  2.77e+04])},
+  'Baidu': {'mean': 2636.6207142857143,
+  'median': 2648.4285714285716,
+  'std': 210.51588570020755,
+  'ci': array([ 2.29e+03,  2.95e+03])},
+  'Amazon': {'mean': 2955.1371428571424,
+  'median': 2887.0,
+  'std': 460.823677343081,
+  'ci': array([ 2.35e+03,  3.88e+03])},
+  'DeepMind': {'mean': 5491.3116666666665,
+  'median': 5387.166666666666,
+  'std': 1019.0023638495716,
+  'ci': array([ 3.93e+03,  7.42e+03])},
+  'OpenAI': {'mean': 1589.0250000000003,
+  'median': 1486.5892857142858,
+  'std': 724.81075982452,
+  'ci': array([ 6.33e+02,  2.82e+03])}}
+```
+
+- Bigger variation here
+- OpenAI particularly big CI
+
+
+Summary post:
+
+Quick analysis of uncertainty in results via bootstrapping:
+
+- My method was to resample at the level of the publications (~50k publications). The analysis is the same as before for each resample, until I compute the mean/std/CI of the final outputs.
+- Bootstrap size 100
+- The average number of unique authors per year for each company didn't vary much. 
+  - E.g. 90% CIs: OpenAI [ 6.55e+00,  7.52e+00], DeepMind [ 1.02e+02,  1.04e+02], Google [ 7.70e+02,  7.71e+02]
+- Citations per author for each company varied moderately, most of all OpenAI (note this is without improvements to the OpenAI data). But the CIs mostly didn't overlap.
+
+```
+OpenAI [ 1.66e+02  2.72e+02]
+Meta [ 7.63e+01  8.98e+01]
+DeepMind [ 5.17e+01  6.08e+01]
+Google [ 3.86e+01  4.66e+01]
+Microsoft [ 3.55e+01  3.59e+01]
+Nvidia [ 2.93e+01  3.03e+01]
+Baidu [ 2.21e+01  2.62e+01]
+Tencent [ 1.48e+01  1.85e+01]
+Amazon [ 1.41e+01  1.56e+01]
+Alibaba [ 1.31e+01  1.32e+01]
+```
+
+- Stats for average team size are forthcoming
