@@ -2089,3 +2089,37 @@ Alibaba [ 1.31e+01  1.32e+01]
 ```
 
 - Stats for average team size are forthcoming
+
+# 2023-Aug-03
+
+## Company compute analysis write-up
+
+## OpenAI extra data
+
+- I want to check which papers overlap, what the unique authors are
+- If it seems tractable to label the affiliation of all the unique authors, I'll do that
+
+Examining the extra papers
+
+- There were 102 found in OpenAlex
+- 6 overlapped with my existing set found via affiliations, leaving 96
+- Those 96 have 348 unique authors. Yikes.
+  - Haven't checked name duplication yet.
+- Looking through the authorships of each work, there are some which still have an _identified_ affiliation with OpenAI. I don't think that should be possible. The original search by affiliation should have picked up those works.
+  - Is it possible by some duplication of works?
+- From a skim, there's a bit of duplication but not a lot.
+  - E.g. "Pieter Abbeel" vs. "OpenAI Peter Abbeel", "Jonathan Ho" vs. "OpenAI Jonathan Ho", "Xi Chen" 3 times (maybe), "Yi Sun" 2 times (maybe).
+- I should check the overlap of authors with the original set of works
+  - Of the 283 unique authors from OpenAlex affiliations, and the 348 unique authors from OpenAI Research, 61 authors overlap.
+    - Not bad.
+    - Wait, don't we just want the authors definitely affiliated with OpenAI? Not the extra ones. Should check that.
+    - Ok, now it's 42 rather than 61. And 62 unique OpenAI authors from OpenAlex affiliations.
+- There are 15 authors whose last known institution in OpenAlex is OpenAI
+- Ok so we have a set of publications that are definitely by OpenAI, and we have a set of authors on those publications that have been affiliated with at OpenAI at some point. It seems highly unlikely that any one of those authors was on any one of those papers and _not_ affiliated with OpenAI _at the time of publication_.
+  - Where I'm going with this: we _assume_ that if an author from this overlapping set of 42 appears on one of these extra 96 papers, that they were affiliated with OpenAI at the time.
+    - This seems like the quickest way to proceed with a decently accurate set of extra OpenAI papers.
+    - Let's see how many extra works we get via this route, and what those works are.
+    - I think a problem that will arise here is, something like the GPT-3 paper will have spuriously high citations per author because we don't identify all the authors.
+    - I think we should also process "raw affiliation string". But maybe then we should do the same for all the other companies. ("Meta" I'm not so sure about, but "Facebook" and other company names seem unique enough.
+      - We can handle that another time in another place.
+      - Nah, still gonna pilot it here.
