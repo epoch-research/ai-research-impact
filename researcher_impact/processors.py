@@ -29,6 +29,7 @@ class OpenAlexProcessor:
         self.author_id_to_name = defaultdict(  # keys: institution
             lambda: defaultdict(dict)  # keys: year
         )
+        self.institution_id_to_name = {}
 
     def process_works(self):
         self.data["bounded_citations"] = defaultdict(  # keys: institution
@@ -87,6 +88,7 @@ class OpenAlexProcessor:
                 self.data["bounded_citations"][alias][pub_year].append(
                     bounded_citations
                 )
+                self.institution_id_to_name[ins["id"]] = ins["display_name"]
                 self.data["coauthor_counts"][alias][pub_year].append(coauthor_count)
                 bounded_citations_added[alias] = True
 

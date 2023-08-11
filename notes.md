@@ -2123,3 +2123,56 @@ Examining the extra papers
     - I think we should also process "raw affiliation string". But maybe then we should do the same for all the other companies. ("Meta" I'm not so sure about, but "Facebook" and other company names seem unique enough.
       - We can handle that another time in another place.
       - Nah, still gonna pilot it here.
+
+# 2023-Aug-11
+
+## Top labs (academic or industry)
+
+Investigating why a priori top AI universities are not showing up
+
+- Baseline: "Machine Learning" concept only; top 200
+
+```
+Google: True
+DeepMind: True
+OpenAI: True
+Toronto: False
+Montréal: True
+```
+
+- "Machine Learning" concept only; top 500
+
+```
+Google: True
+DeepMind: True
+OpenAI: True
+Toronto: False
+Montréal: True
+```
+
+- "Artificial Intelligence" and "Machine Learning" concepts; top 200
+
+```
+Google: True
+DeepMind: False
+OpenAI: False
+Toronto: True
+Montréal: True
+```
+
+- "Artificial Intelligence" and "Machine Learning" concepts; top 500
+
+```
+Google: True
+DeepMind: True
+OpenAI: False
+Toronto: True
+Montréal: True
+```
+
+- So it seems that "Artificial Intelligence" crowds out OpenAI, and Toronto doesn't have enough papers tagged "Machine Learning"
+  - Not even 1000 catches OpenAI, but 2000 does.
+- Top 25 most cited papers from U of T have 5 in 'Machine learning', 11 in 'Artificial intelligence', 2 in 'Deep learning'
+- I think the issue with some institutions being utterly excluded (e.g. Stanford) is that 'x_concepts' doesn't contain AI or ML.
+  - I assume x_concepts is something like "the concepts this institution is most known for or most cited for"
+  - "The Concepts most frequently applied to works affiliated with this institution. Each is represented as a dehydrated Concept object, with one additional attribute:"
