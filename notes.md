@@ -2176,3 +2176,169 @@ Montréal: True
 - I think the issue with some institutions being utterly excluded (e.g. Stanford) is that 'x_concepts' doesn't contain AI or ML.
   - I assume x_concepts is something like "the concepts this institution is most known for or most cited for"
   - "The Concepts most frequently applied to works affiliated with this institution. Each is represented as a dehydrated Concept object, with one additional attribute:"
+
+# 2023-Aug-14
+
+## Finding top researchers at a given institution
+
+Guess:
+
+1. Get institution ID
+2. Filter Authors by institution ID, concept, and sort by citation count
+  1. Can we filter by concept?
+  2. Yes but it has a similar limitation to filtering Institution by concept.
+     1. Probably better for Authors though; they are less diverse in which fields they publish in.
+3. University of Montreal has a sensible-looking top 5:
+
+```
+Yoshua Bengio
+- Obvious
+Aaron Courville
+- Obvious
+David Warde-Farley
+- GAN paper
+Mehdi Mirza
+- GAN and cGAN
+René Doyon
+- Less clear - astronomy?
+```
+
+- Limitations
+  - Citation count metric is biased by single outliers => h-index is better?
+  - Can only match on last known institution
+    - But isn't this what we want? If they are no longer at the lab then we'd want to know where they are now.
+    - There's still a problem with this field often being out of date.
+
+h-index top 5:
+
+```
+Yoshua Bengio
+Aaron Courville
+Jennifer O'Loughlin
+- Health
+René Doyon
+- Astronomy
+J. M. Pearson
+- CS
+```
+
+Number of publications:
+
+```
+Yoshua Bengio
+René Doyon
+Pierre Jolicoeur
+- History
+- Does have AI as a concept, but not ML
+Guy Cloutier
+Jennifer O'Loughlin
+```
+
+Just ML concept, number of publications:
+
+```
+Yoshua Bengio
+Jennifer O'Loughlin
+Aaron Courville
+Jack Siemiatycki
+- Health
+Jian-Yun Nie
+- NLP
+```
+
+AI AND ML, number of publications:
+
+```
+Yoshua Bengio
+Aaron Courville
+Jian-Yun Nie
+Gerhard Wolf
+Houari Sahraoui
+- Automated software engineering
+```
+
+DL, number of publications:
+
+```
+Yoshua Bengio
+Aaron Courville
+Roland Memisevic
+- Good
+David Warde-Farley
+Pouya Bashivan
+- Good
+```
+
+DL, h-index:
+
+```
+Yoshua Bengio
+Aaron Courville
+Roland Memisevic
+David Warde-Farley
+Mehdi Mirza
+```
+
+Now Stanford:
+
+```
+YoungJu Jo
+- Surprising for the top, but relevant
+Jeremy Irvin
+Bharath Ramsundar
+Avanti Shrikumar
+Xianjin Dai
+```
+
+Stanford, works count:
+
+```
+Shreyas Vasanawala
+Sulaiman Vesal
+Xianjin Dai
+Avanti Shrikumar
+Arjun Desai
+```
+
+MIT, h-index:
+
+```
+Song Han
+- Good
+Alexey A. Shvets
+Jonathan Frankle
+Otkrist Gupta
+Qianli Liao
+```
+
+Berkeley, h-index:
+
+```
+Fang-Chieh Chou
+Forrest Iandola
+Jonathan Long
+Mayur Mudigonda
+Yunhui Guo
+```
+
+Berkeley, ML and DL:
+
+```
+Michael I. Jordan
+Rasmus Nielsen
+Jitendra Malik
+Trevor Darrell
+Leon O. Chua
+Pieter Abbeel
+S. Shankar Sastry
+Dawn Song
+```
+
+Alternative methods:
+
+- Get all the AI/ML works of the institution. Then run the processor on that. Then get the list of authors from that. Then sort by h-index or whatever metric.
+  - Quite slow
+- Get the top-cited AI/ML works. Then run the processor on that. Then get the list of authors that are bucketed into the given institution. Then sort by h-index or whatever metric.
+- Use number of papers as the metric
+
+
