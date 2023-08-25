@@ -3,6 +3,7 @@
 *.pyc
 *.png
 *.svg
+*.pdf
 
 data/
 settings.json
