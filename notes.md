@@ -2341,4 +2341,39 @@ Alternative methods:
 - Get the top-cited AI/ML works. Then run the processor on that. Then get the list of authors that are bucketed into the given institution. Then sort by h-index or whatever metric.
 - Use number of papers as the metric
 
+# 2023-Aug-17
 
+## Counting occurrences of algorithms via citations of origin papers
+
+Planning this out
+
+- We need to get the list of origin papers - `algorithm_origin_works`
+  - We also want a mapping from work to affiliation
+  - So it would be a good idea to work with the spreadsheet data directly
+- Then we need the list of top training run papers - `notable_works`
+  - Alternatively, all of the notable ML systems from the PCD database since 2021
+  - We need to make sure these papers are matched in OpenAlex, via `search` and relevance score
+- Then we need a occurence dict for `algorithm_origin_works`
+  - To preserve information, we could start with each value being a list of IDs from `notable_works` that cite the origin work. Then we simply take the `len`.
+- For each work in `notable_works`
+  - Fetch the list of references
+  - For each reference
+    - If its ID is in `algorithm_origin_works`
+    - Append the ID of the work to the occurrence dict
+- Then to count the number of key algorithms used, by institution, use a occurrence-by-institution dict:
+  - For each origin work in occurrence dict
+    - Get occurrence count
+    - Map to institution
+    - Accumulate the count in the occurrence-by-institution dict
+
+# 2023-Aug-18
+
+## Counting occurrences of algorithms via citations of origin papers
+
+- Damn. This method is a flop with OpenAlex, because most works have empty `referenced_works`
+- So the alternatives:
+  - Manually go through each notable paper myself, copy-paste the list of references into a data file
+    - That might not be much faster than reading the implementation details of the paper, which would be more accurate
+  - Give each notable paper to Claude, ask for key algorithms based on references
+    - Many of the papers' files are too large to upload to Claude
+    - But maybe Claude could handle it as raw text
