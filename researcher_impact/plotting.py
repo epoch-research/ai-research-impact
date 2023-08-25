@@ -40,6 +40,6 @@ def set_default_fig_layout(fig, xtickvals, xticktext, ytickvals, yticktext):
     return fig
 
 
-def save_plot(fig, folder, filename, extensions=['png', 'svg'], scale=2):
+def save_plot(fig, folder, filename, extensions=['png', 'svg', 'pdf'], scale=2):
     for ext in extensions:
         fig.write_image(folder + filename + '.' + ext, scale=scale)
