@@ -2377,3 +2377,55 @@ Planning this out
   - Give each notable paper to Claude, ask for key algorithms based on references
     - Many of the papers' files are too large to upload to Claude
     - But maybe Claude could handle it as raw text
+
+# 2023-Aug-25
+
+Redoing the initial selection of institutions
+
+- Freezing the PCD
+- Going with non-log z-score. The results turn out pretty well.
+- The set of top 5 is robust. It's robustly the big 5 US labs: Google, DeepMind, Microsoft, Meta, OpenAI.
+- Ah, if I'm going to add zeros for institutions that are in the OA rankings, I should add the academic institutions too.
+  - Or filter out the academic institutions. But that seems too time consuming.
+    - Not necessarily, if I do it at the stage where I have the institution IDs.
+      - Wait no, I need the Institution object.
+    - Also no because I'm normalising over the whole PCD.
+- Duplication of works by title doesn't seem like a big problem
+  - This is for the 100K top-cited works
+  - Unique titles (exact match): 99371
+  - Lowercase: 99161
+  - Lowercase, and without punctuation and symbols and spaces: 99123
+  - Yeah it doesn't seem like a big problem for this set of works. Less than 1% duplication of works, 1.24% of citations.
+- Current company dataset (will probably be updated for final results in paper, but this is still representative):
+  - Initial: 49708
+  - Unique IDs: 47625
+  - Titles not None: 49697
+  - Unique titles (exact match): 42619
+  - Lowercase: 41284
+  - Lowercase, and without punctuation and symbols and spaces: 40622
+  - Ok, there's a way bigger problem here. 18% of works, 9% of citations.
+  - Worth dealing with.
+  - How to deal?
+  - I think the easiest thing at this stage would be to manually merge the Work object.
+    - What would I need to merge?
+    - Hmm, it is a bit tricky.
+    - First and easiest thing is to accumulate citations per year and cited-by count.
+    - But ideally I'd also merge authorship so that affiliations can be found when missing.
+  - Mm, first let's inspect how the citation count varies for duplicate titles
+    - Not clear if we _should_ add the citation counts together - what if they overlap?
+    - ~~Sometimes the citation counts are similar (even identical), sometimes very different~~
+      - Oh wait I didn't actually deduplicate IDs yet
+    - Correction: sometimes the citation counts are similar, but usually significantly different
+    - Eyeballing a bunch of titles, the duplicate detection method seems sound
+    - I think the safest strategy is to remove the less-cited duplicates.
+
+# 2023-Aug-28
+
+New dataset from new top 25 companies
+
+- Can I query with 25 institutions at once?
+- "You can combine up to 50 values for a given filter in this way." https://docs.openalex.org/how-to-use-the-api/get-lists-of-entities/filter-entity-lists
+- But I'm getting an error
+- Oh right, we actually have 106 institution IDs due to aliases.
+- So I'll need to use the one-at-a-time method. I think that will be fine. I can avoid duplicates as it iterates.
+- 
