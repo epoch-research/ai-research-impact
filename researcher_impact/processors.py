@@ -126,6 +126,10 @@ class OpenAlexProcessor:
         return self.data["author_names"]
 
     def get_author_counts(self):
+        for ins in set(self.institution_aliases.values()):
+            if ins not in self.data["authors"].keys():
+                self.data["authors"][ins][2010] = set()  # placeholder
+        
         self.author_counts = dicts_to_dataarrays(
             self.data["authors"], "year", val_fn=len
         )
@@ -151,6 +155,10 @@ class OpenAlexProcessor:
         return self.individual_bounded_citations
 
     def get_bounded_citations(self):
+        for ins in set(self.institution_aliases.values()):
+            if ins not in self.data["bounded_citations"].keys():
+                self.data["bounded_citations"][ins][2010] = []  # placeholder
+
         self.bounded_citations = dicts_to_dataarrays(
             self.data["bounded_citations"],
             "year",
