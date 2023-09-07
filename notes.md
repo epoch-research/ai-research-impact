@@ -2435,4 +2435,10 @@ Bug in analysis notebook
 - This can happen with bootstrapping
 - Solutions
   - Populate the data with empty lists
-  - 
+
+# 2023-Sep-07
+
+## Results with OpenAI data added
+
+- Firstly I just want to get a feel for the effect of adding this data. Not worried about fairness, rigor etc.
+- 
