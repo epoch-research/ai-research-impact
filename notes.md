@@ -2428,4 +2428,11 @@ New dataset from new top 25 companies
 - But I'm getting an error
 - Oh right, we actually have 106 institution IDs due to aliases.
 - So I'll need to use the one-at-a-time method. I think that will be fine. I can avoid duplicates as it iterates.
-- 
+
+Bug in analysis notebook
+
+- I'm not handling the case where an institution has no data
+- This can happen with bootstrapping
+- Solutions
+  - Populate the data with empty lists
+  - 
