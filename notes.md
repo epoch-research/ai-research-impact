@@ -2123,3 +2123,322 @@ Examining the extra papers
     - I think we should also process "raw affiliation string". But maybe then we should do the same for all the other companies. ("Meta" I'm not so sure about, but "Facebook" and other company names seem unique enough.
       - We can handle that another time in another place.
       - Nah, still gonna pilot it here.
+
+# 2023-Aug-11
+
+## Top labs (academic or industry)
+
+Investigating why a priori top AI universities are not showing up
+
+- Baseline: "Machine Learning" concept only; top 200
+
+```
+Google: True
+DeepMind: True
+OpenAI: True
+Toronto: False
+Montréal: True
+```
+
+- "Machine Learning" concept only; top 500
+
+```
+Google: True
+DeepMind: True
+OpenAI: True
+Toronto: False
+Montréal: True
+```
+
+- "Artificial Intelligence" and "Machine Learning" concepts; top 200
+
+```
+Google: True
+DeepMind: False
+OpenAI: False
+Toronto: True
+Montréal: True
+```
+
+- "Artificial Intelligence" and "Machine Learning" concepts; top 500
+
+```
+Google: True
+DeepMind: True
+OpenAI: False
+Toronto: True
+Montréal: True
+```
+
+- So it seems that "Artificial Intelligence" crowds out OpenAI, and Toronto doesn't have enough papers tagged "Machine Learning"
+  - Not even 1000 catches OpenAI, but 2000 does.
+- Top 25 most cited papers from U of T have 5 in 'Machine learning', 11 in 'Artificial intelligence', 2 in 'Deep learning'
+- I think the issue with some institutions being utterly excluded (e.g. Stanford) is that 'x_concepts' doesn't contain AI or ML.
+  - I assume x_concepts is something like "the concepts this institution is most known for or most cited for"
+  - "The Concepts most frequently applied to works affiliated with this institution. Each is represented as a dehydrated Concept object, with one additional attribute:"
+
+# 2023-Aug-14
+
+## Finding top researchers at a given institution
+
+Guess:
+
+1. Get institution ID
+2. Filter Authors by institution ID, concept, and sort by citation count
+  1. Can we filter by concept?
+  2. Yes but it has a similar limitation to filtering Institution by concept.
+     1. Probably better for Authors though; they are less diverse in which fields they publish in.
+3. University of Montreal has a sensible-looking top 5:
+
+```
+Yoshua Bengio
+- Obvious
+Aaron Courville
+- Obvious
+David Warde-Farley
+- GAN paper
+Mehdi Mirza
+- GAN and cGAN
+René Doyon
+- Less clear - astronomy?
+```
+
+- Limitations
+  - Citation count metric is biased by single outliers => h-index is better?
+  - Can only match on last known institution
+    - But isn't this what we want? If they are no longer at the lab then we'd want to know where they are now.
+    - There's still a problem with this field often being out of date.
+
+h-index top 5:
+
+```
+Yoshua Bengio
+Aaron Courville
+Jennifer O'Loughlin
+- Health
+René Doyon
+- Astronomy
+J. M. Pearson
+- CS
+```
+
+Number of publications:
+
+```
+Yoshua Bengio
+René Doyon
+Pierre Jolicoeur
+- History
+- Does have AI as a concept, but not ML
+Guy Cloutier
+Jennifer O'Loughlin
+```
+
+Just ML concept, number of publications:
+
+```
+Yoshua Bengio
+Jennifer O'Loughlin
+Aaron Courville
+Jack Siemiatycki
+- Health
+Jian-Yun Nie
+- NLP
+```
+
+AI AND ML, number of publications:
+
+```
+Yoshua Bengio
+Aaron Courville
+Jian-Yun Nie
+Gerhard Wolf
+Houari Sahraoui
+- Automated software engineering
+```
+
+DL, number of publications:
+
+```
+Yoshua Bengio
+Aaron Courville
+Roland Memisevic
+- Good
+David Warde-Farley
+Pouya Bashivan
+- Good
+```
+
+DL, h-index:
+
+```
+Yoshua Bengio
+Aaron Courville
+Roland Memisevic
+David Warde-Farley
+Mehdi Mirza
+```
+
+Now Stanford:
+
+```
+YoungJu Jo
+- Surprising for the top, but relevant
+Jeremy Irvin
+Bharath Ramsundar
+Avanti Shrikumar
+Xianjin Dai
+```
+
+Stanford, works count:
+
+```
+Shreyas Vasanawala
+Sulaiman Vesal
+Xianjin Dai
+Avanti Shrikumar
+Arjun Desai
+```
+
+MIT, h-index:
+
+```
+Song Han
+- Good
+Alexey A. Shvets
+Jonathan Frankle
+Otkrist Gupta
+Qianli Liao
+```
+
+Berkeley, h-index:
+
+```
+Fang-Chieh Chou
+Forrest Iandola
+Jonathan Long
+Mayur Mudigonda
+Yunhui Guo
+```
+
+Berkeley, ML and DL:
+
+```
+Michael I. Jordan
+Rasmus Nielsen
+Jitendra Malik
+Trevor Darrell
+Leon O. Chua
+Pieter Abbeel
+S. Shankar Sastry
+Dawn Song
+```
+
+Alternative methods:
+
+- Get all the AI/ML works of the institution. Then run the processor on that. Then get the list of authors from that. Then sort by h-index or whatever metric.
+  - Quite slow
+- Get the top-cited AI/ML works. Then run the processor on that. Then get the list of authors that are bucketed into the given institution. Then sort by h-index or whatever metric.
+- Use number of papers as the metric
+
+# 2023-Aug-17
+
+## Counting occurrences of algorithms via citations of origin papers
+
+Planning this out
+
+- We need to get the list of origin papers - `algorithm_origin_works`
+  - We also want a mapping from work to affiliation
+  - So it would be a good idea to work with the spreadsheet data directly
+- Then we need the list of top training run papers - `notable_works`
+  - Alternatively, all of the notable ML systems from the PCD database since 2021
+  - We need to make sure these papers are matched in OpenAlex, via `search` and relevance score
+- Then we need a occurence dict for `algorithm_origin_works`
+  - To preserve information, we could start with each value being a list of IDs from `notable_works` that cite the origin work. Then we simply take the `len`.
+- For each work in `notable_works`
+  - Fetch the list of references
+  - For each reference
+    - If its ID is in `algorithm_origin_works`
+    - Append the ID of the work to the occurrence dict
+- Then to count the number of key algorithms used, by institution, use a occurrence-by-institution dict:
+  - For each origin work in occurrence dict
+    - Get occurrence count
+    - Map to institution
+    - Accumulate the count in the occurrence-by-institution dict
+
+# 2023-Aug-18
+
+## Counting occurrences of algorithms via citations of origin papers
+
+- Damn. This method is a flop with OpenAlex, because most works have empty `referenced_works`
+- So the alternatives:
+  - Manually go through each notable paper myself, copy-paste the list of references into a data file
+    - That might not be much faster than reading the implementation details of the paper, which would be more accurate
+  - Give each notable paper to Claude, ask for key algorithms based on references
+    - Many of the papers' files are too large to upload to Claude
+    - But maybe Claude could handle it as raw text
+
+# 2023-Aug-25
+
+Redoing the initial selection of institutions
+
+- Freezing the PCD
+- Going with non-log z-score. The results turn out pretty well.
+- The set of top 5 is robust. It's robustly the big 5 US labs: Google, DeepMind, Microsoft, Meta, OpenAI.
+- Ah, if I'm going to add zeros for institutions that are in the OA rankings, I should add the academic institutions too.
+  - Or filter out the academic institutions. But that seems too time consuming.
+    - Not necessarily, if I do it at the stage where I have the institution IDs.
+      - Wait no, I need the Institution object.
+    - Also no because I'm normalising over the whole PCD.
+- Duplication of works by title doesn't seem like a big problem
+  - This is for the 100K top-cited works
+  - Unique titles (exact match): 99371
+  - Lowercase: 99161
+  - Lowercase, and without punctuation and symbols and spaces: 99123
+  - Yeah it doesn't seem like a big problem for this set of works. Less than 1% duplication of works, 1.24% of citations.
+- Current company dataset (will probably be updated for final results in paper, but this is still representative):
+  - Initial: 49708
+  - Unique IDs: 47625
+  - Titles not None: 49697
+  - Unique titles (exact match): 42619
+  - Lowercase: 41284
+  - Lowercase, and without punctuation and symbols and spaces: 40622
+  - Ok, there's a way bigger problem here. 18% of works, 9% of citations.
+  - Worth dealing with.
+  - How to deal?
+  - I think the easiest thing at this stage would be to manually merge the Work object.
+    - What would I need to merge?
+    - Hmm, it is a bit tricky.
+    - First and easiest thing is to accumulate citations per year and cited-by count.
+    - But ideally I'd also merge authorship so that affiliations can be found when missing.
+  - Mm, first let's inspect how the citation count varies for duplicate titles
+    - Not clear if we _should_ add the citation counts together - what if they overlap?
+    - ~~Sometimes the citation counts are similar (even identical), sometimes very different~~
+      - Oh wait I didn't actually deduplicate IDs yet
+    - Correction: sometimes the citation counts are similar, but usually significantly different
+    - Eyeballing a bunch of titles, the duplicate detection method seems sound
+    - I think the safest strategy is to remove the less-cited duplicates.
+
+# 2023-Aug-28
+
+New dataset from new top 25 companies
+
+- Can I query with 25 institutions at once?
+- "You can combine up to 50 values for a given filter in this way." https://docs.openalex.org/how-to-use-the-api/get-lists-of-entities/filter-entity-lists
+- But I'm getting an error
+- Oh right, we actually have 106 institution IDs due to aliases.
+- So I'll need to use the one-at-a-time method. I think that will be fine. I can avoid duplicates as it iterates.
+
+Bug in analysis notebook
+
+- I'm not handling the case where an institution has no data
+- This can happen with bootstrapping
+- Solutions
+  - Populate the data with empty lists
+
+# 2023-Sep-07
+
+## Results with OpenAI data added
+
+- Firstly I just want to get a feel for the effect of adding this data. Not worried about fairness, rigor etc.
+- 
