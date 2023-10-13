@@ -2441,4 +2441,87 @@ Bug in analysis notebook
 ## Results with OpenAI data added
 
 - Firstly I just want to get a feel for the effect of adding this data. Not worried about fairness, rigor etc.
-- 
+- New OpenAI dist for mean citations per author: 249 (90% CI: 95 to 458) (width: 363)
+  - Old: ~290 (90% CI: 117 to 684) (width: 567)
+  - As expected, CI width has decreased. But by less than I expected.
+  - EDIT: this was probably just variance in the bootstrap!
+  - Mean has also decreased. Is it more the citations or the authors?
+  - Citations
+    - 1722.385 [657,  2740]
+    - Old: 1589.0250000000003 [633, 2820]
+    - Similar
+  - Authors
+    - 11.06 [8.49, 13.9]
+    - Old: 7.04 [6.55, 7.52]
+    - Ok, it has increased but not by a large margin. Also more variance now.
+    - More recent results seem more similar? Going off the old chart of citations per author vs. authors.
+- Bug? EDIT: No
+  - Mean of the samples is not the same as the mean returned by `bootstrap_stats`
+  - E.g. OpenAI `bootstrap_stats` result: 1722.385 vs. OpenAI mean: 1519.25
+  - There's two different variables: `institution_citations` (used for )
+  - Ohhh, one is the mean for each bootstrap iteration over years, and then `boostrap_stats` aggregates the boostrap iterations
+  - Cool
+- Hold up. Let's scrutinise.
+  - Am I really using the data that replaces the affiliations?
+    - I think not! That code comes after the point of saving the data
+  - Oh, I'm also a dingus. I didn't assign `works` to `new_works`!
+- New-New OpenAI dist for mean citations per author: 155 [97 to 215] (width: 118)
+  - Expected - much lower average, much narrower CI
+  - Nice
+- So this seems like an improvement. Do I just want to leave this as-is?
+  - The rationale is that OpenAI data seemed particularly noisy and underrepresented when just searching OpenAlex publications.
+  - So we've searched for more publications by cross-referencing the OpenAI research database.
+  - To actually get more OpenAI authorships, we then used two methods:
+    - For authors who, according to OpenAlex, definitely were at OpenAI _at some point in time_, and appeared on one of the newly found OpenAI works, add OpenAI to their authorship.
+      - Note that I didn't use raw affiliation strings for this
+    - Use the raw affiliation strings to find other authors
+
+# 2023-Sep-26
+
+## Change point in compute concentration
+
+- Step function model
+  - Biggest diff in BIC: 2019-09-30, full=190.80162007074375, broken=167.63444416049688
+    - R^2: -2.220446049250313e-16 vs. 0.3204578368130502
+- Linear model
+  - Biggest diff in BIC: 2019-09-30, full=182.65422818806846, broken=171.49353236541617
+    - R^2: 0.16036645903874558 vs. 0.3243096613113271
+- Dual linear model
+  - Restrict so that segments must have at least 3 data points
+  - Biggest diff in BIC: 2019-10-31, full=182.65422818806846, broken=172.20923670037925
+    - But the R^2 values are really bad: 0.0024 and 0.0115
+- Step function is the best in terms of BIC because it accounts for difference in number of parameters
+
+# 2023-Oct-13
+
+## Proportion of Chinese research in English
+
+- Map of Science (Zach says this feature will disappear soon): https://sciencemap.eto.tech/?us_affiliation_share=0%2C0&chinese_language_share=0%2C0&mode=summary
+- China-affiliated, English-language articles in last five years: 35,566
+  - AI relevant: 1.62%
+- China-affiliated, Chinese-language articles in last five years: 174,634
+  - AI relevant: 0.86%
+- China-affiliated, all articles in last five years: 2,578,283
+  - AI relevant: 1.24%
+- I'm confused why the first two numbers don't sum to the third number. Maybe most articles are a mixture of languages in some way?
+  - Ah, it's measuring the percentage of articles in the cluster that are Chinese. So it's the _clusters_ that are a mixture of languages. That makes sense.
+- So these numbers indicate that there are more clusters of "research that has a Chinese-language body, title or abstract", than there are clusters of "research that _only_ has a version with an English title or abstract".
+  - The latter has twice the rate of AI-relevant articles. So AI article count has a smaller difference: 576 English-language vs. 1500 Chinese-language.
+    - This sample size is pretty small.
+  - Publications in the former category may still have English versions available.
+  - Overall this updates me towards more Chinese-language AI research than I thought. But it's still pretty unclear what the fraction of exclusively Chinese-language articles vs. English articles is.
+
+## Persistence analysis
+
+- How to do this?
+  - Cut off the data at 2020, or the halfway point 2017
+  - Look at the period of 2017 to present
+  - 2010, 2013, 2016, 2019, 2022
+  - 2011, 2014, 2017, 2020, 2023
+  - 2010, 2014, 2018, 2022
+  - How do I cut off the data to a certain start and end date?
+  - Well, I think we may already have this functionality. We used to do it for the time series. We just need to do it for the aggregate results.
+  - Intervene at the stage where data is bucketed by year. Then filter the years.
+- Ok, how to keep the results safe?
+  - Copy the current results to archive them, AND make a custom results directory for filtering.
+  - 
