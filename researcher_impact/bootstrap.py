@@ -2,10 +2,13 @@ from collections import defaultdict
 import numpy as np
 
 
-def bootstrap_wrapper(func, data, rng, bootstrap_size=1000):
+def bootstrap_wrapper(func, data, rng, bootstrap_size=1000, mock=False):
     """
     Returns a bootstrap sample of the result of `func` on `data`.
     """
+    if mock:
+        return [func(data)]
+    
     data_size = len(data)
     bootstrap_sample = []
 

@@ -2524,4 +2524,439 @@ Bug in analysis notebook
   - Intervene at the stage where data is bucketed by year. Then filter the years.
 - Ok, how to keep the results safe?
   - Copy the current results to archive them, AND make a custom results directory for filtering.
-  - 
+- Execution
+  - 1000 bootstrap samples took about 10 minutes to process
+- Results - 2020 cutoff
+  - Includes 2020
+  - Hmm, maybe I should have cut off at 2019
+  - At any rate, the publication results are similar. Most high-level conclusions hold.
+  - IBM has more publications than Google.
+  - Google then Microsoft still lead on citations.
+  - Chinese labs still lag on citations
+  - Average number of authors is lower for the middle cluster of labs in the citations-authors phase plot. NVIDIA, Baidu and Tencent are a bit closer together. But broadly the same picture.
+- Sense check: are the authors counts moving?
+  - Yeah definitely. It's just that IBM doesn't move much.
+  - Oops, mucked up. Should cut off at 2016 inclusive if the other set is 2017 - 2023.
+
+## Effect of 2017 AlexNet paper
+
+- This paper has wrong affiliations. And I don't think we should count it at all because it's a reprint of a 2012 paper.
+- Removing the 2017 AlexNet paper
+- Using the original dataset rather than bootstrapping - but to preserve code, I'm putting in a "mock" feature into the bootstrapping code.
+- Effect on citation count
+  - Everything looks unchanged except OpenAI, which changes by a relatively small amount and doesn't change OpenAI's rank.
+  - Google also changes ever-so-slightly because it also had affiliation on the 2017 AlexNet paper.
+- Effect on citations per author
+  - All companies look much more different here - why?
+  - Not a drastic change but a notable change. Maybe almost the kind of change between 2010--2016 and 2017--2023.
+  - Given the citation counts were basically unchanged but for OpenAI, it must be the author counts that differ.
+  - Could bootstrapping really be having this effect? I'd expect it to 
+- Current author counts without AlexNet paper:
+
+```
+[{'Meta': <xarray.DataArray (year: 14)>
+  array([ 1.00e+01,  2.90e+01,  2.50e+01,  4.20e+01,  7.30e+01,  9.10e+01,
+          1.21e+02,  1.96e+02,  3.40e+02,  6.03e+02,  9.27e+02,  1.10e+03,
+          4.53e+02,  9.60e+01])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Google': <xarray.DataArray (year: 14)>
+  array([ 2.41e+02,  2.89e+02,  3.27e+02,  3.53e+02,  3.84e+02,  5.27e+02,
+          7.96e+02,  8.71e+02,  1.32e+03,  1.86e+03,  2.15e+03,  2.22e+03,
+          1.51e+03,  8.90e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Quansight': <xarray.DataArray (year: 2)>
+  array([ 4.00e+00,  1.00e+00])
+  Coordinates:
+    * year     (year) int64 2020 2022,
+  'Enthought': <xarray.DataArray (year: 8)>
+  array([ 1.00e+00,  1.00e+00,  1.00e+00,  2.00e+00,  1.00e+00,  7.00e+00,
+          3.00e+00,  3.00e+00])
+  Coordinates:
+    * year     (year) int64 2010 2011 2014 2016 2017 2019 2020 2021,
+  'DeepMind': <xarray.DataArray (year: 12)>
+  array([ 1.00e+00,  7.00e+00,  4.00e+00,  3.40e+01,  8.70e+01,  1.00e+02,
+          1.75e+02,  2.10e+02,  2.61e+02,  2.77e+02,  2.57e+02,  9.20e+01])
+  Coordinates:
+    * year     (year) int64 2011 2013 2014 2015 2016 ... 2019 2020 2021 2022 2023,
+  'Microsoft': <xarray.DataArray (year: 14)>
+  array([ 7.63e+02,  7.46e+02,  8.14e+02,  8.75e+02,  8.90e+02,  8.13e+02,
+          8.01e+02,  8.20e+02,  9.63e+02,  1.18e+03,  1.46e+03,  1.60e+03,
+          1.18e+03,  7.33e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'IBM': <xarray.DataArray (year: 14)>
+  array([ 9.37e+02,  1.07e+03,  9.56e+02,  1.01e+03,  9.70e+02,  9.03e+02,
+          9.66e+02,  1.06e+03,  1.22e+03,  1.34e+03,  1.26e+03,  1.32e+03,
+          8.85e+02,  4.48e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Amazon': <xarray.DataArray (year: 14)>
+  array([ 9.00e+00,  1.30e+01,  1.80e+01,  2.50e+01,  4.30e+01,  6.10e+01,
+          6.20e+01,  1.37e+02,  2.84e+02,  5.15e+02,  7.17e+02,  1.01e+03,
+          8.82e+02,  4.81e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'OpenAI': <xarray.DataArray (year: 8)>
+  array([ 1.20e+01,  2.30e+01,  3.20e+01,  4.90e+01,  4.30e+01,  4.90e+01,
+          2.90e+01,  1.00e+01])
+  Coordinates:
+    * year     (year) int64 2016 2017 2018 2019 2020 2021 2022 2023,
+  'Adobe': <xarray.DataArray (year: 14)>
+  array([ 2.50e+01,  4.30e+01,  3.90e+01,  4.60e+01,  5.20e+01,  6.10e+01,
+          8.50e+01,  1.35e+02,  1.75e+02,  2.04e+02,  2.30e+02,  2.35e+02,
+          2.17e+02,  1.65e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Netflix': <xarray.DataArray (year: 12)>
+  array([ 4.00e+00,  4.00e+00,  3.00e+00,  1.10e+01,  1.50e+01,  9.00e+00,
+          2.00e+01,  2.50e+01,  3.20e+01,  4.20e+01,  2.70e+01,  1.10e+01])
+  Coordinates:
+    * year     (year) int64 2012 2013 2014 2015 2016 ... 2019 2020 2021 2022 2023,
+  'Intel': <xarray.DataArray (year: 14)>
+  array([ 3.37e+02,  3.84e+02,  3.71e+02,  4.74e+02,  4.48e+02,  4.82e+02,
+          4.73e+02,  4.66e+02,  6.09e+02,  7.02e+02,  7.50e+02,  8.40e+02,
+          7.21e+02,  3.30e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Huawei': <xarray.DataArray (year: 14)>
+  array([ 9.50e+01,  1.11e+02,  1.63e+02,  1.48e+02,  1.70e+02,  2.70e+02,
+          2.65e+02,  3.14e+02,  3.61e+02,  5.82e+02,  7.48e+02,  1.24e+03,
+          1.19e+03,  7.23e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Salesforce': <xarray.DataArray (year: 11)>
+  array([ 2.00e+00,  4.00e+00,  1.00e+00,  3.00e+00,  5.00e+00,  1.10e+01,
+          1.40e+01,  3.70e+01,  6.20e+01,  4.60e+01,  3.40e+01])
+  Coordinates:
+    * year     (year) int64 2011 2012 2013 2016 2017 2018 2019 2020 2021 2022 2023,
+  'NEC': <xarray.DataArray (year: 14)>
+  array([ 1.71e+02,  1.60e+02,  1.46e+02,  1.96e+02,  1.37e+02,  1.08e+02,
+          1.11e+02,  1.02e+02,  1.28e+02,  1.84e+02,  1.81e+02,  1.83e+02,
+          1.84e+02,  9.80e+01])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Baidu': <xarray.DataArray (year: 14)>
+  array([ 3.10e+01,  2.10e+01,  3.50e+01,  5.10e+01,  3.60e+01,  7.60e+01,
+          1.59e+02,  1.12e+02,  1.73e+02,  3.32e+02,  3.68e+02,  4.57e+02,
+          4.05e+02,  2.09e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Nvidia': <xarray.DataArray (year: 14)>
+  array([ 2.50e+01,  2.90e+01,  3.60e+01,  3.60e+01,  3.30e+01,  5.00e+01,
+          7.90e+01,  9.70e+01,  1.76e+02,  2.91e+02,  3.39e+02,  3.22e+02,
+          2.83e+02,  1.92e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Yandex': <xarray.DataArray (year: 14)>
+  array([ 6.00e+00,  1.40e+01,  1.30e+01,  1.50e+01,  2.10e+01,  3.00e+01,
+          3.20e+01,  1.80e+01,  2.50e+01,  2.50e+01,  3.30e+01,  2.80e+01,
+          1.80e+01,  6.00e+00])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Twitter': <xarray.DataArray (year: 14)>
+  array([ 1.00e+00,  1.00e+01,  7.00e+00,  1.20e+01,  2.20e+01,  2.00e+01,
+          1.30e+01,  1.05e+02,  7.60e+01,  1.29e+02,  1.71e+02,  7.70e+01,
+          6.00e+01,  1.20e+01])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Uber': <xarray.DataArray (year: 9)>
+  array([ 4.00e+00,  1.30e+01,  2.70e+01,  3.90e+01,  7.50e+01,  8.30e+01,
+          4.10e+01,  1.50e+01,  3.00e+00])
+  Coordinates:
+    * year     (year) int64 2011 2016 2017 2018 2019 2020 2021 2022 2023,
+  'Tencent': <xarray.DataArray (year: 14)>
+  array([ 6.00e+00,  8.00e+00,  2.00e+01,  6.00e+00,  1.50e+01,  3.50e+01,
+          4.20e+01,  1.04e+02,  2.36e+02,  4.15e+02,  6.07e+02,  7.63e+02,
+          9.65e+02,  4.94e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Naver': <xarray.DataArray (year: 14)>
+  array([ 2.00e+00,  2.00e+00,  1.00e+00,  6.00e+00,  6.00e+00,  8.00e+00,
+          2.80e+01,  5.00e+01,  5.10e+01,  1.09e+02,  1.32e+02,  1.51e+02,
+          1.73e+02,  7.20e+01])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Alibaba': <xarray.DataArray (year: 14)>
+  array([ 5.00e+00,  1.50e+01,  9.00e+00,  8.00e+00,  2.60e+01,  2.70e+01,
+          3.60e+01,  9.80e+01,  2.86e+02,  5.94e+02,  8.66e+02,  1.20e+03,
+          1.10e+03,  5.65e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Xerox': <xarray.DataArray (year: 13)>
+  array([ 6.10e+01,  6.80e+01,  8.40e+01,  6.90e+01,  6.30e+01,  8.30e+01,
+          9.40e+01,  5.40e+01,  1.60e+01,  7.00e+00,  1.30e+01,  9.00e+00,
+          2.00e+00])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2018 2019 2020 2021 2022,
+  'Group Sense': <xarray.DataArray (year: 12)>
+  array([ 2.00e+00,  1.00e+00,  1.00e+00,  4.00e+00,  2.30e+01,  4.40e+01,
+          6.50e+01,  1.15e+02,  1.68e+02,  1.52e+02,  1.98e+02,  1.02e+02])
+  Coordinates:
+    * year     (year) int64 2010 2012 2013 2015 2016 ... 2019 2020 2021 2022 2023}]
+```
+
+- `institution_mean_authors_stats` without bootstrap:
+
+```
+defaultdict(dict,
+            {'Meta': {'mean': 293.42857142857144,
+              'median': 293.42857142857144,
+              'std': 0.0,
+              'ci': array([ 2.93e+02,  2.93e+02])},
+             'Google': {'mean': 980.9285714285714,
+              'median': 980.9285714285714,
+              'std': 0.0,
+              'ci': array([ 9.81e+02,  9.81e+02])},
+             'Quansight': {'mean': 2.5,
+              'median': 2.5,
+              'std': 0.0,
+              'ci': array([ 2.50e+00,  2.50e+00])},
+             'Enthought': {'mean': 2.375,
+              'median': 2.375,
+              'std': 0.0,
+              'ci': array([ 2.38e+00,  2.38e+00])},
+             'DeepMind': {'mean': 125.41666666666667,
+              'median': 125.41666666666667,
+              'std': 0.0,
+              'ci': array([ 1.25e+02,  1.25e+02])},
+             'Microsoft': {'mean': 973.9285714285714,
+              'median': 973.9285714285714,
+              'std': 0.0,
+              'ci': array([ 9.74e+02,  9.74e+02])},
+             'IBM': {'mean': 1024.5714285714287,
+              'median': 1024.5714285714287,
+              'std': 0.0,
+              'ci': array([ 1.02e+03,  1.02e+03])},
+             'Amazon': {'mean': 303.92857142857144,
+              'median': 303.92857142857144,
+              'std': 0.0,
+              'ci': array([ 3.04e+02,  3.04e+02])},
+             'OpenAI': {'mean': 30.875,
+              'median': 30.875,
+              'std': 0.0,
+              'ci': array([ 3.09e+01,  3.09e+01])},
+             'Adobe': {'mean': 122.28571428571429,
+              'median': 122.28571428571429,
+              'std': 0.0,
+              'ci': array([ 1.22e+02,  1.22e+02])},
+             'Netflix': {'mean': 16.916666666666668,
+              'median': 16.916666666666668,
+              'std': 0.0,
+              'ci': array([ 1.69e+01,  1.69e+01])},
+             'Intel': {'mean': 527.6428571428571,
+              'median': 527.6428571428571,
+              'std': 0.0,
+              'ci': array([ 5.28e+02,  5.28e+02])},
+             'Huawei': {'mean': 456.2142857142857,
+              'median': 456.2142857142857,
+              'std': 0.0,
+              'ci': array([ 4.56e+02,  4.56e+02])},
+             'Salesforce': {'mean': 19.90909090909091,
+              'median': 19.90909090909091,
+              'std': 0.0,
+              'ci': array([ 1.99e+01,  1.99e+01])},
+             'NEC': {'mean': 149.21428571428572,
+              'median': 149.21428571428572,
+              'std': 0.0,
+              'ci': array([ 1.49e+02,  1.49e+02])},
+             'Baidu': {'mean': 176.07142857142858,
+              'median': 176.07142857142858,
+              'std': 0.0,
+              'ci': array([ 1.76e+02,  1.76e+02])},
+             'Nvidia': {'mean': 142.0,
+              'median': 142.0,
+              'std': 0.0,
+              'ci': array([ 1.42e+02,  1.42e+02])},
+             'Yandex': {'mean': 20.285714285714285,
+              'median': 20.285714285714285,
+              'std': 0.0,
+              'ci': array([ 2.03e+01,  2.03e+01])},
+             'Twitter': {'mean': 51.07142857142857,
+              'median': 51.07142857142857,
+              'std': 0.0,
+              'ci': array([ 5.11e+01,  5.11e+01])},
+             'Uber': {'mean': 33.333333333333336,
+              'median': 33.333333333333336,
+              'std': 0.0,
+              'ci': array([ 3.33e+01,  3.33e+01])},
+             'Tencent': {'mean': 265.42857142857144,
+              'median': 265.42857142857144,
+              'std': 0.0,
+              'ci': array([ 2.65e+02,  2.65e+02])},
+             'Naver': {'mean': 56.5,
+              'median': 56.5,
+              'std': 0.0,
+              'ci': array([ 5.65e+01,  5.65e+01])},
+             'Alibaba': {'mean': 345.07142857142856,
+              'median': 345.07142857142856,
+              'std': 0.0,
+              'ci': array([ 3.45e+02,  3.45e+02])},
+             'Xerox': {'mean': 47.92307692307692,
+              'median': 47.92307692307692,
+              'std': 0.0,
+              'ci': array([ 4.79e+01,  4.79e+01])},
+             'Group Sense': {'mean': 72.91666666666667,
+              'median': 72.91666666666667,
+              'std': 0.0,
+              'ci': array([ 7.29e+01,  7.29e+01])}})
+```
+
+- Running with the 1000-iter bootstrap, the author counts are exactly the same and I only see a difference in OpenAI citations per author.
+- `institution_mean_authors_stats`:
+
+```
+defaultdict(dict,
+            {'Intel': {'mean': 361.3795,
+              'median': 361.07142857142856,
+              'std': 4.952961920993975,
+              'ci': array([ 3.54e+02,  3.70e+02])},
+             'Microsoft': {'mean': 729.8762142857144,
+              'median': 729.7857142857143,
+              'std': 6.160819134097449,
+              'ci': array([ 7.20e+02,  7.40e+02])},
+             'Huawei': {'mean': 322.7213571428572,
+              'median': 322.6071428571429,
+              'std': 3.9656247410382512,
+              'ci': array([ 3.16e+02,  3.29e+02])},
+             'Google': {'mean': 722.2392142857143,
+              'median': 722.5,
+              'std': 8.03439646305248,
+              'ci': array([ 7.09e+02,  7.35e+02])},
+             'Nvidia': {'mean': 103.11407142857142,
+              'median': 103.10714285714286,
+              'std': 2.363554689531884,
+              'ci': array([ 9.93e+01,  1.07e+02])},
+             'Alibaba': {'mean': 250.10863736263738,
+              'median': 249.92857142857142,
+              'std': 4.016567075753233,
+              'ci': array([ 2.44e+02,  2.57e+02])},
+             'Tencent': {'mean': 196.82499450549452,
+              'median': 196.75,
+              'std': 3.0242102984025254,
+              'ci': array([ 1.92e+02,  2.02e+02])},
+             'Amazon': {'mean': 214.80407142857143,
+              'median': 214.85714285714286,
+              'std': 3.778778654188009,
+              'ci': array([ 2.08e+02,  2.21e+02])},
+             'Group Sense': {'mean': 56.930034343434336,
+              'median': 56.45454545454545,
+              'std': 4.566981631512569,
+              'ci': array([ 5.08e+01,  6.50e+01])},
+             'Adobe': {'mean': 96.0182142857143,
+              'median': 96.07142857142857,
+              'std': 1.5909501316598744,
+              'ci': array([ 9.34e+01,  9.86e+01])},
+             'DeepMind': {'mean': 93.40836212121212,
+              'median': 92.75,
+              'std': 5.62292233145222,
+              'ci': array([ 8.52e+01,  1.04e+02])},
+             'Meta': {'mean': 216.2165,
+              'median': 216.28571428571428,
+              'std': 3.8169466634513842,
+              'ci': array([ 2.10e+02,  2.22e+02])},
+             'IBM': {'mean': 734.613,
+              'median': 734.7142857142857,
+              'std': 7.444262026718899,
+              'ci': array([ 7.23e+02,  7.47e+02])},
+             'Naver': {'mean': 41.83186213786214,
+              'median': 41.57142857142857,
+              'std': 2.6909020312556002,
+              'ci': array([ 3.79e+01,  4.67e+01])},
+             'Uber': {'mean': 23.341488095238095,
+              'median': 23.333333333333332,
+              'std': 1.595907580213337,
+              'ci': array([ 2.09e+01,  2.60e+01])},
+             'Netflix': {'mean': 12.17019696969697,
+              'median': 12.166666666666666,
+              'std': 0.7925127001731398,
+              'ci': array([ 1.09e+01,  1.35e+01])},
+             'Baidu': {'mean': 127.67914285714285,
+              'median': 127.78571428571429,
+              'std': 3.2012417361176,
+              'ci': array([ 1.22e+02,  1.33e+02])},
+             'NEC': {'mean': 104.54792857142859,
+              'median': 104.71428571428571,
+              'std': 2.427057047797869,
+              'ci': array([ 1.00e+02,  1.08e+02])},
+             'Twitter': {'mean': 33.75693956043956,
+              'median': 33.785714285714285,
+              'std': 2.1722442162709443,
+              'ci': array([ 3.03e+01,  3.73e+01])},
+             'Xerox': {'mean': 34.81775641025641,
+              'median': 34.69230769230769,
+              'std': 1.528238995440851,
+              'ci': array([ 3.25e+01,  3.76e+01])},
+             'Salesforce': {'mean': 15.579245454545454,
+              'median': 15.363636363636363,
+              'std': 1.3052925346746762,
+              'ci': array([ 1.36e+01,  1.81e+01])},
+             'Yandex': {'mean': 13.920846153846155,
+              'median': 13.928571428571429,
+              'std': 0.7151118883086662,
+              'ci': array([ 1.27e+01,  1.51e+01])},
+             'OpenAI': {'mean': 23.315375,
+              'median': 23.375,
+              'std': 1.6766478414905737,
+              'ci': array([ 2.04e+01,  2.59e+01])},
+             'Enthought': {'mean': 2.080461904761905,
+              'median': 2.1666666666666665,
+              'std': 0.5273604562501122,
+              'ci': array([ 1.25e+00,  3.00e+00])},
+             'Quansight': {'mean': 2.378,
+              'median': 2.5,
+              'std': 1.06986728148869,
+              'ci': array([ 1.00e+00,  4.00e+00])}})
+```
+
+- Let's look at Google as an example. No-bootstrap followed by bootstrap.
+
+```
+             'Google': {'mean': 980.9285714285714,
+              'median': 980.9285714285714,
+              'std': 0.0,
+              'ci': array([ 9.81e+02,  9.81e+02])},
+
+             'Google': {'mean': 722.2392142857143,
+              'median': 722.5,
+              'std': 8.03439646305248,
+              'ci': array([ 7.09e+02,  7.35e+02])},  
+```
+
+- Yeah so the no-boostrap result is quite a bit higher than the bootstrap result
+- What's more, the no-bootstrap result is way outside the 95th percentile given by the bootstrap
+- Why would this bias be present?
+- Eyeballing it, the direction of this bias is consistent, or at least the prevailing direction. Unbootstrapped gives higher author counts than bootstrapped.
+- The bootstrap is supposed to vary which publications are in the set.
+- Some publications will be missing, while others will be duplicated.
+- Assume the distribution of author counts is heavy-tailed
+- So when you bootstrap, low-author-count publications are more likely to appear in the sample because those are more common.
+  - I don't think this is true. Bootstrapping should be unbiased. This small experiment written by GPT-4 provides support:
+
+```
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Generate log-normal data
+np.random.seed(0)
+original_data = np.random.lognormal(mean=0, sigma=1, size=1000)
+
+# Bootstrap
+n_bootstrap = 1000
+bootstrap_means = np.zeros(n_bootstrap)
+
+for i in range(n_bootstrap):
+    bootstrap_sample = np.random.choice(original_data, size=len(original_data), replace=True)
+    bootstrap_means[i] = np.mean(bootstrap_sample)
+
+# Plot
+plt.hist(bootstrap_means, bins=30, alpha=0.75)
+plt.xlabel('Bootstrap Means')
+plt.ylabel('Frequency')
+plt.show()
+```
+
+- The mean of bootstrap means and the original data mean are very close together - 1.554 vs. 1.556.
+- So there's some other effect. Can't rule out a bug at this point.
+- At this point it would be best to re-run all the results without bootstrapping just to be safe.
