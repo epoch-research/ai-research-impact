@@ -4159,3 +4159,33 @@ No raw affiliation match: https://openalex.org/W3014098445 ['Instituto de Tecnol
   - Mostly the empty raw string case
   - Why is the number of no matches at all (155) much smaller than the number of no matches?
     - I think it's a case of any vs. all. If any Microsoft affiliations have no match in the raw string, that counts towards 1682. If all Microsoft affiliations have no match in the raw string, that counts towards 155. However, Microsoft does seem unusual in having a large difference between these numbers, compared to the companies I've looked at so far.
+
+For now I'm just going to measure the rate of false positives in a rough way. It's better than nothing.
+
+```
+{'Adobe': 0.8805474906677727,
+ 'Alibaba': 0.9272624753312658,
+ 'Amazon': 0.8445901639344262,
+ 'Baidu': 0.8728943338437979,
+ 'DeepMind': 0.9824561403508771,
+ 'Google': 0.8185350689722168,
+ 'Group Sense': 0.9786931818181818,
+ 'Huawei': 0.9106606606606606,
+ 'IBM': 0.8880985774393909,
+ 'Intel': 0.9620328257860391,
+ 'NEC': 0.9565217391304348,
+ 'Naver': 0.8396694214876033,
+ 'Netflix': 0.9265536723163842,
+ 'Nvidia': 0.9189526184538653,
+ 'Meta': 0.8218934911242604,
+ 'Microsoft': 0.8883103010881901,
+ 'OpenAI': 1.0,
+ 'Salesforce': 1.0,
+ 'Tencent': 0.897364771151179,
+ 'Twitter': 0.9449275362318841,
+ 'Uber': 0.782051282051282,
+ 'Xerox': 0.8087954110898662,
+ 'Yandex': 0.8862745098039215,
+ 'Enthought': 1.0,
+ 'Quansight': 1.0}
+```
