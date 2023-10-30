@@ -4189,3 +4189,133 @@ For now I'm just going to measure the rate of false positives in a rough way. It
  'Enthought': 1.0,
  'Quansight': 1.0}
 ```
+
+# 2023-Oct-26
+
+## Effect of citation count horizon
+
+Default: 3-year horizon
+
+Comparison to 1-year horizon
+
+- Citations
+  - 1-year horizon results in fewer total citations, as you'd expect
+  - Ranking of top 5 companies is identical
+  - Intel moves from 6th to 8th
+  - Alibaba moves from 11th to 9th; Adobe moves from 9th to 11th
+  - Twitter and Salesforce move up one rank
+- Citations per author
+  - Less citations all around as you'd expect.
+  - Slightly less spread vertically; y-axis is 2 to 20 rather than 5 to 100
+  - Meta moves down relative to OpenAI, gets around the same as DeepMind (~13 citations per author)
+  - Other than that, not much relative change. Just small movements.
+
+Comparison to 13-year horizon
+
+- Citations
+  - Ranking of top 6 companies is identical
+  - Microsoft gets closer to Google; only 6.5k citations apart
+  - Tencent moves from 7th to 9th; Adobe moves from 9th to 7th
+  - Baidu moves from 13th to 11th
+  - A couple other stragglers move ...
+- Citations per author
+  - More citations all around as you'd expect
+  - More spread vertically; leaders pull further ahead (y-axis is 20 to 200)
+  - Meta moves to just surpass OpenAI (!); DeepMind pulls away from SenseTime
+  - Baidu pulls ahead of the remaining Chinese companies, but still well below the US leaders
+  - Remaining Chinese companies are still bunched low down
+
+Comparison from 5-year to 13-year horizon
+
+- Citations
+  - Only Baidu and Xerox move up two ranks
+
+## Significance tests
+
+Mann-Whitney U-test
+
+Running 1000-iteration bootstrap
+
+Without bootstrapping - just looking at citation distributions
+
+- So basically comparing medians 
+
+```
+OpenAI: sample_size=163, mean=125.06, median=40.00
+DeepMind: sample_size=755, mean=91.37, median=9.00
+U statistic: 82856.5
+Common language effect size: 0.6732742859464511
+P-value: 3.3046184119745824e-12
+
+DeepMind: sample_size=755, mean=91.37, median=9.00
+Meta: sample_size=3329, mean=56.34, median=7.00
+U statistic: 1321799.5
+Common language effect size: 0.5259020169929518
+P-value: 0.02550132814119708
+
+Meta: sample_size=3329, mean=56.34, median=7.00
+Google: sample_size=10094, mean=42.90, median=6.00
+U statistic: 17509800.0
+Common language effect size: 0.5210796226495276
+P-value: 0.00024323255887518514
+
+DeepMind: sample_size=755, mean=91.37, median=9.00
+SenseTime: sample_size=677, mean=40.59, median=7.00
+U statistic: 269390.5
+Common language effect size: 0.5270437359992957
+P-value: 0.07550946625709978
+
+Meta: sample_size=3329, mean=56.34, median=7.00
+SenseTime: sample_size=677, mean=40.59, median=7.00
+U statistic: 1130491.5
+Common language effect size: 0.5016084425262443
+P-value: 0.8944704725031989
+
+Google: sample_size=10094, mean=42.90, median=6.00
+Microsoft: sample_size=14550, mean=23.11, median=5.00
+U statistic: 77623307.5
+Common language effect size: 0.5285253837297105
+P-value: 1.7603900311941404e-14
+
+Microsoft: sample_size=14550, mean=23.11, median=5.00
+Baidu: sample_size=1920, mean=18.89, median=3.00
+U statistic: 15209581.0
+Common language effect size: 0.5444437643184421
+P-value: 1.7926411666094342e-10
+
+Microsoft: sample_size=14550, mean=23.11, median=5.00
+Tencent: sample_size=3495, mean=16.06, median=3.00
+U statistic: 27650282.0
+Common language effect size: 0.5437376320615115
+P-value: 5.800135862795158e-16
+
+Microsoft: sample_size=14550, mean=23.11, median=5.00
+Alibaba: sample_size=3424, mean=12.11, median=3.00
+U statistic: 28288977.5
+Common language effect size: 0.5678328335260301
+P-value: 1.3954284708149238e-35
+
+Baidu: sample_size=1920, mean=18.89, median=3.00
+Tencent: sample_size=3495, mean=16.06, median=3.00
+U statistic: 3351130.0
+Common language effect size: 0.49939347877920837
+P-value: 0.940426519267788
+
+Baidu: sample_size=1920, mean=18.89, median=3.00
+Alibaba: sample_size=3424, mean=12.11, median=3.00
+U statistic: 3425506.5
+Common language effect size: 0.5210624908732476
+P-value: 0.009658506915015045
+
+Tencent: sample_size=3495, mean=16.06, median=3.00
+Alibaba: sample_size=3424, mean=12.11, median=3.00
+U statistic: 6248270.0
+Common language effect size: 0.5221302461460298
+P-value: 0.0012645664688033977
+
+Alibaba: sample_size=3424, mean=12.11, median=3.00
+Huawei: sample_size=5140, mean=10.69, median=2.00
+U statistic: 9516697.0
+Common language effect size: 0.5407410837666824
+P-value: 8.093556703400892e-11
+```
