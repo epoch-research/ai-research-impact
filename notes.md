@@ -2441,4 +2441,2236 @@ Bug in analysis notebook
 ## Results with OpenAI data added
 
 - Firstly I just want to get a feel for the effect of adding this data. Not worried about fairness, rigor etc.
-- 
+- New OpenAI dist for mean citations per author: 249 (90% CI: 95 to 458) (width: 363)
+  - Old: ~290 (90% CI: 117 to 684) (width: 567)
+  - As expected, CI width has decreased. But by less than I expected.
+  - EDIT: this was probably just variance in the bootstrap!
+  - Mean has also decreased. Is it more the citations or the authors?
+  - Citations
+    - 1722.385 [657,  2740]
+    - Old: 1589.0250000000003 [633, 2820]
+    - Similar
+  - Authors
+    - 11.06 [8.49, 13.9]
+    - Old: 7.04 [6.55, 7.52]
+    - Ok, it has increased but not by a large margin. Also more variance now.
+    - More recent results seem more similar? Going off the old chart of citations per author vs. authors.
+- Bug? EDIT: No
+  - Mean of the samples is not the same as the mean returned by `bootstrap_stats`
+  - E.g. OpenAI `bootstrap_stats` result: 1722.385 vs. OpenAI mean: 1519.25
+  - There's two different variables: `institution_citations` (used for )
+  - Ohhh, one is the mean for each bootstrap iteration over years, and then `boostrap_stats` aggregates the boostrap iterations
+  - Cool
+- Hold up. Let's scrutinise.
+  - Am I really using the data that replaces the affiliations?
+    - I think not! That code comes after the point of saving the data
+  - Oh, I'm also a dingus. I didn't assign `works` to `new_works`!
+- New-New OpenAI dist for mean citations per author: 155 [97 to 215] (width: 118)
+  - Expected - much lower average, much narrower CI
+  - Nice
+- So this seems like an improvement. Do I just want to leave this as-is?
+  - The rationale is that OpenAI data seemed particularly noisy and underrepresented when just searching OpenAlex publications.
+  - So we've searched for more publications by cross-referencing the OpenAI research database.
+  - To actually get more OpenAI authorships, we then used two methods:
+    - For authors who, according to OpenAlex, definitely were at OpenAI _at some point in time_, and appeared on one of the newly found OpenAI works, add OpenAI to their authorship.
+      - Note that I didn't use raw affiliation strings for this
+    - Use the raw affiliation strings to find other authors
+
+# 2023-Sep-26
+
+## Change point in compute concentration
+
+- Step function model
+  - Biggest diff in BIC: 2019-09-30, full=190.80162007074375, broken=167.63444416049688
+    - R^2: -2.220446049250313e-16 vs. 0.3204578368130502
+- Linear model
+  - Biggest diff in BIC: 2019-09-30, full=182.65422818806846, broken=171.49353236541617
+    - R^2: 0.16036645903874558 vs. 0.3243096613113271
+- Dual linear model
+  - Restrict so that segments must have at least 3 data points
+  - Biggest diff in BIC: 2019-10-31, full=182.65422818806846, broken=172.20923670037925
+    - But the R^2 values are really bad: 0.0024 and 0.0115
+- Step function is the best in terms of BIC because it accounts for difference in number of parameters
+
+# 2023-Oct-13
+
+## Proportion of Chinese research in English
+
+- Map of Science (Zach says this feature will disappear soon): https://sciencemap.eto.tech/?us_affiliation_share=0%2C0&chinese_language_share=0%2C0&mode=summary
+- China-affiliated, English-language articles in last five years: 35,566
+  - AI relevant: 1.62%
+- China-affiliated, Chinese-language articles in last five years: 174,634
+  - AI relevant: 0.86%
+- China-affiliated, all articles in last five years: 2,578,283
+  - AI relevant: 1.24%
+- I'm confused why the first two numbers don't sum to the third number. Maybe most articles are a mixture of languages in some way?
+  - Ah, it's measuring the percentage of articles in the cluster that are Chinese. So it's the _clusters_ that are a mixture of languages. That makes sense.
+- So these numbers indicate that there are more clusters of "research that has a Chinese-language body, title or abstract", than there are clusters of "research that _only_ has a version with an English title or abstract".
+  - The latter has twice the rate of AI-relevant articles. So AI article count has a smaller difference: 576 English-language vs. 1500 Chinese-language.
+    - This sample size is pretty small.
+  - Publications in the former category may still have English versions available.
+  - Overall this updates me towards more Chinese-language AI research than I thought. But it's still pretty unclear what the fraction of exclusively Chinese-language articles vs. English articles is.
+
+## Persistence analysis
+
+- How to do this?
+  - Cut off the data at 2020, or the halfway point 2017
+  - Look at the period of 2017 to present
+  - 2010, 2013, 2016, 2019, 2022
+  - 2011, 2014, 2017, 2020, 2023
+  - 2010, 2014, 2018, 2022
+  - How do I cut off the data to a certain start and end date?
+  - Well, I think we may already have this functionality. We used to do it for the time series. We just need to do it for the aggregate results.
+  - Intervene at the stage where data is bucketed by year. Then filter the years.
+- Ok, how to keep the results safe?
+  - Copy the current results to archive them, AND make a custom results directory for filtering.
+- Execution
+  - 1000 bootstrap samples took about 10 minutes to process
+- Results - 2020 cutoff
+  - Includes 2020
+  - Hmm, maybe I should have cut off at 2019
+  - At any rate, the publication results are similar. Most high-level conclusions hold.
+  - IBM has more publications than Google.
+  - Google then Microsoft still lead on citations.
+  - Chinese labs still lag on citations
+  - Average number of authors is lower for the middle cluster of labs in the citations-authors phase plot. NVIDIA, Baidu and Tencent are a bit closer together. But broadly the same picture.
+- Sense check: are the authors counts moving?
+  - Yeah definitely. It's just that IBM doesn't move much.
+  - Oops, mucked up. Should cut off at 2016 inclusive if the other set is 2017 - 2023.
+
+## Effect of 2017 AlexNet paper
+
+- This paper has wrong affiliations. And I don't think we should count it at all because it's a reprint of a 2012 paper.
+- Removing the 2017 AlexNet paper
+- Using the original dataset rather than bootstrapping - but to preserve code, I'm putting in a "mock" feature into the bootstrapping code.
+- Effect on citation count
+  - Everything looks unchanged except OpenAI, which changes by a relatively small amount and doesn't change OpenAI's rank.
+  - Google also changes ever-so-slightly because it also had affiliation on the 2017 AlexNet paper.
+- Effect on citations per author
+  - All companies look much more different here - why?
+  - Not a drastic change but a notable change. Maybe almost the kind of change between 2010--2016 and 2017--2023.
+  - Given the citation counts were basically unchanged but for OpenAI, it must be the author counts that differ.
+  - Could bootstrapping really be having this effect? I'd expect it to 
+- Current author counts without AlexNet paper:
+
+```
+[{'Meta': <xarray.DataArray (year: 14)>
+  array([ 1.00e+01,  2.90e+01,  2.50e+01,  4.20e+01,  7.30e+01,  9.10e+01,
+          1.21e+02,  1.96e+02,  3.40e+02,  6.03e+02,  9.27e+02,  1.10e+03,
+          4.53e+02,  9.60e+01])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Google': <xarray.DataArray (year: 14)>
+  array([ 2.41e+02,  2.89e+02,  3.27e+02,  3.53e+02,  3.84e+02,  5.27e+02,
+          7.96e+02,  8.71e+02,  1.32e+03,  1.86e+03,  2.15e+03,  2.22e+03,
+          1.51e+03,  8.90e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Quansight': <xarray.DataArray (year: 2)>
+  array([ 4.00e+00,  1.00e+00])
+  Coordinates:
+    * year     (year) int64 2020 2022,
+  'Enthought': <xarray.DataArray (year: 8)>
+  array([ 1.00e+00,  1.00e+00,  1.00e+00,  2.00e+00,  1.00e+00,  7.00e+00,
+          3.00e+00,  3.00e+00])
+  Coordinates:
+    * year     (year) int64 2010 2011 2014 2016 2017 2019 2020 2021,
+  'DeepMind': <xarray.DataArray (year: 12)>
+  array([ 1.00e+00,  7.00e+00,  4.00e+00,  3.40e+01,  8.70e+01,  1.00e+02,
+          1.75e+02,  2.10e+02,  2.61e+02,  2.77e+02,  2.57e+02,  9.20e+01])
+  Coordinates:
+    * year     (year) int64 2011 2013 2014 2015 2016 ... 2019 2020 2021 2022 2023,
+  'Microsoft': <xarray.DataArray (year: 14)>
+  array([ 7.63e+02,  7.46e+02,  8.14e+02,  8.75e+02,  8.90e+02,  8.13e+02,
+          8.01e+02,  8.20e+02,  9.63e+02,  1.18e+03,  1.46e+03,  1.60e+03,
+          1.18e+03,  7.33e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'IBM': <xarray.DataArray (year: 14)>
+  array([ 9.37e+02,  1.07e+03,  9.56e+02,  1.01e+03,  9.70e+02,  9.03e+02,
+          9.66e+02,  1.06e+03,  1.22e+03,  1.34e+03,  1.26e+03,  1.32e+03,
+          8.85e+02,  4.48e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Amazon': <xarray.DataArray (year: 14)>
+  array([ 9.00e+00,  1.30e+01,  1.80e+01,  2.50e+01,  4.30e+01,  6.10e+01,
+          6.20e+01,  1.37e+02,  2.84e+02,  5.15e+02,  7.17e+02,  1.01e+03,
+          8.82e+02,  4.81e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'OpenAI': <xarray.DataArray (year: 8)>
+  array([ 1.20e+01,  2.30e+01,  3.20e+01,  4.90e+01,  4.30e+01,  4.90e+01,
+          2.90e+01,  1.00e+01])
+  Coordinates:
+    * year     (year) int64 2016 2017 2018 2019 2020 2021 2022 2023,
+  'Adobe': <xarray.DataArray (year: 14)>
+  array([ 2.50e+01,  4.30e+01,  3.90e+01,  4.60e+01,  5.20e+01,  6.10e+01,
+          8.50e+01,  1.35e+02,  1.75e+02,  2.04e+02,  2.30e+02,  2.35e+02,
+          2.17e+02,  1.65e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Netflix': <xarray.DataArray (year: 12)>
+  array([ 4.00e+00,  4.00e+00,  3.00e+00,  1.10e+01,  1.50e+01,  9.00e+00,
+          2.00e+01,  2.50e+01,  3.20e+01,  4.20e+01,  2.70e+01,  1.10e+01])
+  Coordinates:
+    * year     (year) int64 2012 2013 2014 2015 2016 ... 2019 2020 2021 2022 2023,
+  'Intel': <xarray.DataArray (year: 14)>
+  array([ 3.37e+02,  3.84e+02,  3.71e+02,  4.74e+02,  4.48e+02,  4.82e+02,
+          4.73e+02,  4.66e+02,  6.09e+02,  7.02e+02,  7.50e+02,  8.40e+02,
+          7.21e+02,  3.30e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Huawei': <xarray.DataArray (year: 14)>
+  array([ 9.50e+01,  1.11e+02,  1.63e+02,  1.48e+02,  1.70e+02,  2.70e+02,
+          2.65e+02,  3.14e+02,  3.61e+02,  5.82e+02,  7.48e+02,  1.24e+03,
+          1.19e+03,  7.23e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Salesforce': <xarray.DataArray (year: 11)>
+  array([ 2.00e+00,  4.00e+00,  1.00e+00,  3.00e+00,  5.00e+00,  1.10e+01,
+          1.40e+01,  3.70e+01,  6.20e+01,  4.60e+01,  3.40e+01])
+  Coordinates:
+    * year     (year) int64 2011 2012 2013 2016 2017 2018 2019 2020 2021 2022 2023,
+  'NEC': <xarray.DataArray (year: 14)>
+  array([ 1.71e+02,  1.60e+02,  1.46e+02,  1.96e+02,  1.37e+02,  1.08e+02,
+          1.11e+02,  1.02e+02,  1.28e+02,  1.84e+02,  1.81e+02,  1.83e+02,
+          1.84e+02,  9.80e+01])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Baidu': <xarray.DataArray (year: 14)>
+  array([ 3.10e+01,  2.10e+01,  3.50e+01,  5.10e+01,  3.60e+01,  7.60e+01,
+          1.59e+02,  1.12e+02,  1.73e+02,  3.32e+02,  3.68e+02,  4.57e+02,
+          4.05e+02,  2.09e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Nvidia': <xarray.DataArray (year: 14)>
+  array([ 2.50e+01,  2.90e+01,  3.60e+01,  3.60e+01,  3.30e+01,  5.00e+01,
+          7.90e+01,  9.70e+01,  1.76e+02,  2.91e+02,  3.39e+02,  3.22e+02,
+          2.83e+02,  1.92e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Yandex': <xarray.DataArray (year: 14)>
+  array([ 6.00e+00,  1.40e+01,  1.30e+01,  1.50e+01,  2.10e+01,  3.00e+01,
+          3.20e+01,  1.80e+01,  2.50e+01,  2.50e+01,  3.30e+01,  2.80e+01,
+          1.80e+01,  6.00e+00])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Twitter': <xarray.DataArray (year: 14)>
+  array([ 1.00e+00,  1.00e+01,  7.00e+00,  1.20e+01,  2.20e+01,  2.00e+01,
+          1.30e+01,  1.05e+02,  7.60e+01,  1.29e+02,  1.71e+02,  7.70e+01,
+          6.00e+01,  1.20e+01])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Uber': <xarray.DataArray (year: 9)>
+  array([ 4.00e+00,  1.30e+01,  2.70e+01,  3.90e+01,  7.50e+01,  8.30e+01,
+          4.10e+01,  1.50e+01,  3.00e+00])
+  Coordinates:
+    * year     (year) int64 2011 2016 2017 2018 2019 2020 2021 2022 2023,
+  'Tencent': <xarray.DataArray (year: 14)>
+  array([ 6.00e+00,  8.00e+00,  2.00e+01,  6.00e+00,  1.50e+01,  3.50e+01,
+          4.20e+01,  1.04e+02,  2.36e+02,  4.15e+02,  6.07e+02,  7.63e+02,
+          9.65e+02,  4.94e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Naver': <xarray.DataArray (year: 14)>
+  array([ 2.00e+00,  2.00e+00,  1.00e+00,  6.00e+00,  6.00e+00,  8.00e+00,
+          2.80e+01,  5.00e+01,  5.10e+01,  1.09e+02,  1.32e+02,  1.51e+02,
+          1.73e+02,  7.20e+01])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Alibaba': <xarray.DataArray (year: 14)>
+  array([ 5.00e+00,  1.50e+01,  9.00e+00,  8.00e+00,  2.60e+01,  2.70e+01,
+          3.60e+01,  9.80e+01,  2.86e+02,  5.94e+02,  8.66e+02,  1.20e+03,
+          1.10e+03,  5.65e+02])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2019 2020 2021 2022 2023,
+  'Xerox': <xarray.DataArray (year: 13)>
+  array([ 6.10e+01,  6.80e+01,  8.40e+01,  6.90e+01,  6.30e+01,  8.30e+01,
+          9.40e+01,  5.40e+01,  1.60e+01,  7.00e+00,  1.30e+01,  9.00e+00,
+          2.00e+00])
+  Coordinates:
+    * year     (year) int64 2010 2011 2012 2013 2014 ... 2018 2019 2020 2021 2022,
+  'Group Sense': <xarray.DataArray (year: 12)>
+  array([ 2.00e+00,  1.00e+00,  1.00e+00,  4.00e+00,  2.30e+01,  4.40e+01,
+          6.50e+01,  1.15e+02,  1.68e+02,  1.52e+02,  1.98e+02,  1.02e+02])
+  Coordinates:
+    * year     (year) int64 2010 2012 2013 2015 2016 ... 2019 2020 2021 2022 2023}]
+```
+
+- `institution_mean_authors_stats` without bootstrap:
+
+```
+defaultdict(dict,
+            {'Meta': {'mean': 293.42857142857144,
+              'median': 293.42857142857144,
+              'std': 0.0,
+              'ci': array([ 2.93e+02,  2.93e+02])},
+             'Google': {'mean': 980.9285714285714,
+              'median': 980.9285714285714,
+              'std': 0.0,
+              'ci': array([ 9.81e+02,  9.81e+02])},
+             'Quansight': {'mean': 2.5,
+              'median': 2.5,
+              'std': 0.0,
+              'ci': array([ 2.50e+00,  2.50e+00])},
+             'Enthought': {'mean': 2.375,
+              'median': 2.375,
+              'std': 0.0,
+              'ci': array([ 2.38e+00,  2.38e+00])},
+             'DeepMind': {'mean': 125.41666666666667,
+              'median': 125.41666666666667,
+              'std': 0.0,
+              'ci': array([ 1.25e+02,  1.25e+02])},
+             'Microsoft': {'mean': 973.9285714285714,
+              'median': 973.9285714285714,
+              'std': 0.0,
+              'ci': array([ 9.74e+02,  9.74e+02])},
+             'IBM': {'mean': 1024.5714285714287,
+              'median': 1024.5714285714287,
+              'std': 0.0,
+              'ci': array([ 1.02e+03,  1.02e+03])},
+             'Amazon': {'mean': 303.92857142857144,
+              'median': 303.92857142857144,
+              'std': 0.0,
+              'ci': array([ 3.04e+02,  3.04e+02])},
+             'OpenAI': {'mean': 30.875,
+              'median': 30.875,
+              'std': 0.0,
+              'ci': array([ 3.09e+01,  3.09e+01])},
+             'Adobe': {'mean': 122.28571428571429,
+              'median': 122.28571428571429,
+              'std': 0.0,
+              'ci': array([ 1.22e+02,  1.22e+02])},
+             'Netflix': {'mean': 16.916666666666668,
+              'median': 16.916666666666668,
+              'std': 0.0,
+              'ci': array([ 1.69e+01,  1.69e+01])},
+             'Intel': {'mean': 527.6428571428571,
+              'median': 527.6428571428571,
+              'std': 0.0,
+              'ci': array([ 5.28e+02,  5.28e+02])},
+             'Huawei': {'mean': 456.2142857142857,
+              'median': 456.2142857142857,
+              'std': 0.0,
+              'ci': array([ 4.56e+02,  4.56e+02])},
+             'Salesforce': {'mean': 19.90909090909091,
+              'median': 19.90909090909091,
+              'std': 0.0,
+              'ci': array([ 1.99e+01,  1.99e+01])},
+             'NEC': {'mean': 149.21428571428572,
+              'median': 149.21428571428572,
+              'std': 0.0,
+              'ci': array([ 1.49e+02,  1.49e+02])},
+             'Baidu': {'mean': 176.07142857142858,
+              'median': 176.07142857142858,
+              'std': 0.0,
+              'ci': array([ 1.76e+02,  1.76e+02])},
+             'Nvidia': {'mean': 142.0,
+              'median': 142.0,
+              'std': 0.0,
+              'ci': array([ 1.42e+02,  1.42e+02])},
+             'Yandex': {'mean': 20.285714285714285,
+              'median': 20.285714285714285,
+              'std': 0.0,
+              'ci': array([ 2.03e+01,  2.03e+01])},
+             'Twitter': {'mean': 51.07142857142857,
+              'median': 51.07142857142857,
+              'std': 0.0,
+              'ci': array([ 5.11e+01,  5.11e+01])},
+             'Uber': {'mean': 33.333333333333336,
+              'median': 33.333333333333336,
+              'std': 0.0,
+              'ci': array([ 3.33e+01,  3.33e+01])},
+             'Tencent': {'mean': 265.42857142857144,
+              'median': 265.42857142857144,
+              'std': 0.0,
+              'ci': array([ 2.65e+02,  2.65e+02])},
+             'Naver': {'mean': 56.5,
+              'median': 56.5,
+              'std': 0.0,
+              'ci': array([ 5.65e+01,  5.65e+01])},
+             'Alibaba': {'mean': 345.07142857142856,
+              'median': 345.07142857142856,
+              'std': 0.0,
+              'ci': array([ 3.45e+02,  3.45e+02])},
+             'Xerox': {'mean': 47.92307692307692,
+              'median': 47.92307692307692,
+              'std': 0.0,
+              'ci': array([ 4.79e+01,  4.79e+01])},
+             'Group Sense': {'mean': 72.91666666666667,
+              'median': 72.91666666666667,
+              'std': 0.0,
+              'ci': array([ 7.29e+01,  7.29e+01])}})
+```
+
+- Running with the 1000-iter bootstrap, the author counts are exactly the same and I only see a difference in OpenAI citations per author.
+- `institution_mean_authors_stats`:
+
+```
+defaultdict(dict,
+            {'Intel': {'mean': 361.3795,
+              'median': 361.07142857142856,
+              'std': 4.952961920993975,
+              'ci': array([ 3.54e+02,  3.70e+02])},
+             'Microsoft': {'mean': 729.8762142857144,
+              'median': 729.7857142857143,
+              'std': 6.160819134097449,
+              'ci': array([ 7.20e+02,  7.40e+02])},
+             'Huawei': {'mean': 322.7213571428572,
+              'median': 322.6071428571429,
+              'std': 3.9656247410382512,
+              'ci': array([ 3.16e+02,  3.29e+02])},
+             'Google': {'mean': 722.2392142857143,
+              'median': 722.5,
+              'std': 8.03439646305248,
+              'ci': array([ 7.09e+02,  7.35e+02])},
+             'Nvidia': {'mean': 103.11407142857142,
+              'median': 103.10714285714286,
+              'std': 2.363554689531884,
+              'ci': array([ 9.93e+01,  1.07e+02])},
+             'Alibaba': {'mean': 250.10863736263738,
+              'median': 249.92857142857142,
+              'std': 4.016567075753233,
+              'ci': array([ 2.44e+02,  2.57e+02])},
+             'Tencent': {'mean': 196.82499450549452,
+              'median': 196.75,
+              'std': 3.0242102984025254,
+              'ci': array([ 1.92e+02,  2.02e+02])},
+             'Amazon': {'mean': 214.80407142857143,
+              'median': 214.85714285714286,
+              'std': 3.778778654188009,
+              'ci': array([ 2.08e+02,  2.21e+02])},
+             'Group Sense': {'mean': 56.930034343434336,
+              'median': 56.45454545454545,
+              'std': 4.566981631512569,
+              'ci': array([ 5.08e+01,  6.50e+01])},
+             'Adobe': {'mean': 96.0182142857143,
+              'median': 96.07142857142857,
+              'std': 1.5909501316598744,
+              'ci': array([ 9.34e+01,  9.86e+01])},
+             'DeepMind': {'mean': 93.40836212121212,
+              'median': 92.75,
+              'std': 5.62292233145222,
+              'ci': array([ 8.52e+01,  1.04e+02])},
+             'Meta': {'mean': 216.2165,
+              'median': 216.28571428571428,
+              'std': 3.8169466634513842,
+              'ci': array([ 2.10e+02,  2.22e+02])},
+             'IBM': {'mean': 734.613,
+              'median': 734.7142857142857,
+              'std': 7.444262026718899,
+              'ci': array([ 7.23e+02,  7.47e+02])},
+             'Naver': {'mean': 41.83186213786214,
+              'median': 41.57142857142857,
+              'std': 2.6909020312556002,
+              'ci': array([ 3.79e+01,  4.67e+01])},
+             'Uber': {'mean': 23.341488095238095,
+              'median': 23.333333333333332,
+              'std': 1.595907580213337,
+              'ci': array([ 2.09e+01,  2.60e+01])},
+             'Netflix': {'mean': 12.17019696969697,
+              'median': 12.166666666666666,
+              'std': 0.7925127001731398,
+              'ci': array([ 1.09e+01,  1.35e+01])},
+             'Baidu': {'mean': 127.67914285714285,
+              'median': 127.78571428571429,
+              'std': 3.2012417361176,
+              'ci': array([ 1.22e+02,  1.33e+02])},
+             'NEC': {'mean': 104.54792857142859,
+              'median': 104.71428571428571,
+              'std': 2.427057047797869,
+              'ci': array([ 1.00e+02,  1.08e+02])},
+             'Twitter': {'mean': 33.75693956043956,
+              'median': 33.785714285714285,
+              'std': 2.1722442162709443,
+              'ci': array([ 3.03e+01,  3.73e+01])},
+             'Xerox': {'mean': 34.81775641025641,
+              'median': 34.69230769230769,
+              'std': 1.528238995440851,
+              'ci': array([ 3.25e+01,  3.76e+01])},
+             'Salesforce': {'mean': 15.579245454545454,
+              'median': 15.363636363636363,
+              'std': 1.3052925346746762,
+              'ci': array([ 1.36e+01,  1.81e+01])},
+             'Yandex': {'mean': 13.920846153846155,
+              'median': 13.928571428571429,
+              'std': 0.7151118883086662,
+              'ci': array([ 1.27e+01,  1.51e+01])},
+             'OpenAI': {'mean': 23.315375,
+              'median': 23.375,
+              'std': 1.6766478414905737,
+              'ci': array([ 2.04e+01,  2.59e+01])},
+             'Enthought': {'mean': 2.080461904761905,
+              'median': 2.1666666666666665,
+              'std': 0.5273604562501122,
+              'ci': array([ 1.25e+00,  3.00e+00])},
+             'Quansight': {'mean': 2.378,
+              'median': 2.5,
+              'std': 1.06986728148869,
+              'ci': array([ 1.00e+00,  4.00e+00])}})
+```
+
+- Let's look at Google as an example. No-bootstrap followed by bootstrap.
+
+```
+             'Google': {'mean': 980.9285714285714,
+              'median': 980.9285714285714,
+              'std': 0.0,
+              'ci': array([ 9.81e+02,  9.81e+02])},
+
+             'Google': {'mean': 722.2392142857143,
+              'median': 722.5,
+              'std': 8.03439646305248,
+              'ci': array([ 7.09e+02,  7.35e+02])},  
+```
+
+- Yeah so the no-boostrap result is quite a bit higher than the bootstrap result
+- What's more, the no-bootstrap result is way outside the 95th percentile given by the bootstrap
+- Why would this bias be present?
+- Eyeballing it, the direction of this bias is consistent, or at least the prevailing direction. Unbootstrapped gives higher author counts than bootstrapped.
+- The bootstrap is supposed to vary which publications are in the set.
+- Some publications will be missing, while others will be duplicated.
+- Assume the distribution of author counts is heavy-tailed
+- So when you bootstrap, low-author-count publications are more likely to appear in the sample because those are more common.
+  - I don't think this is true. Bootstrapping should be unbiased. This small experiment written by GPT-4 provides support:
+
+```
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Generate log-normal data
+np.random.seed(0)
+original_data = np.random.lognormal(mean=0, sigma=1, size=1000)
+
+# Bootstrap
+n_bootstrap = 1000
+bootstrap_means = np.zeros(n_bootstrap)
+
+for i in range(n_bootstrap):
+    bootstrap_sample = np.random.choice(original_data, size=len(original_data), replace=True)
+    bootstrap_means[i] = np.mean(bootstrap_sample)
+
+# Plot
+plt.hist(bootstrap_means, bins=30, alpha=0.75)
+plt.xlabel('Bootstrap Means')
+plt.ylabel('Frequency')
+plt.show()
+```
+
+- The mean of bootstrap means and the original data mean are very close together - 1.554 vs. 1.556.
+- So there's some other effect. Can't rule out a bug at this point.
+- At this point it would be best to re-run all the results without bootstrapping just to be safe.
+
+# 2023-Oct-24
+
+## Searching works using raw affiliation string
+
+```python
+institution_works = merge_pages(
+    Works() \
+        .filter(raw_affiliation_string={'search': 'open ai'}) \
+        .filter(concepts={"id": 'https://openalex.org/C154945302|https://openalex.org/C119857082'}) \
+        .filter(from_publication_date="2010-01-01") \
+        .filter(to_publication_date="2023-06-01") \
+        .paginate(per_page=200, n_max=int(1e6))        
+)
+len(institution_works)
+```
+
+- 'openai' returns 156 works
+  - Quick Ctrl+F doesn't show false positives
+- 'open ai' returns 83 works
+  - Some of these are legit, others are not e.g. 'Norwegian Open AI Lab'
+- Maybe should just use raw affiliation string rather than manually add OpenAI works?
+
+```
+Salesforce
+2page [00:03,  1.86s/page]
+Raw affiliation keywords: ['salesforce', 'sales force']
+    Works: 236
+    Raw affiliation count: 236
+    Raw affiliation fraction: 1.0
+```
+
+- Weird stuff going on with Amazon
+  - Could be a multiple IDs issue
+
+```
+Raw affiliation keywords: ['amazon']
+No raw affiliation match: https://openalex.org/W2963961878 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963423916 ['', '', '']
+No raw affiliation match: https://openalex.org/W2405578611 ['']
+No raw affiliation match: https://openalex.org/W2964222566 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2890410208 ['', '', '']
+No raw affiliation match: https://openalex.org/W2970697704 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962717849 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963352809 ['', '']
+No raw affiliation match: https://openalex.org/W2971105107 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2889928394 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2804292122 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2995589713 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963419583 ['', '', '']
+No raw affiliation match: https://openalex.org/W2787733970 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2803023299 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963633299 ['', '']
+No raw affiliation match: https://openalex.org/W3034255912 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2792839479 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2964224652 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2952113915 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963809789 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2964092925 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962739340 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963569817 ['', '', '']
+No raw affiliation match: https://openalex.org/W3030754432 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2798761464 ['']
+No raw affiliation match: https://openalex.org/W2785542264 ['', '', '']
+No raw affiliation match: https://openalex.org/W2789566302 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2891146651 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2908007030 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963973577 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2991522342 ['', '', '']
+No raw affiliation match: https://openalex.org/W2987154291 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2885950361 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2739473244 ['', '', '']
+No raw affiliation match: https://openalex.org/W2897003273 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3114916066 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2898917980 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2971274354 ['', '', '']
+No raw affiliation match: https://openalex.org/W2995636882 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3106484161 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2985353426 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963547384 ['', '']
+No raw affiliation match: https://openalex.org/W2963756980 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2803533564 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963499433 ['', '', '']
+No raw affiliation match: https://openalex.org/W2970176896 ['', '', '']
+No raw affiliation match: https://openalex.org/W2572670101 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963162885 ['', '', '']
+No raw affiliation match: https://openalex.org/W2972425456 ['', '', '']
+No raw affiliation match: https://openalex.org/W2950695840 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2970421227 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963532386 ['']
+No raw affiliation match: https://openalex.org/W2964123521 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963355572 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2396230943 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2945315238 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962682420 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2986068180 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963882293 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2964022663 ['', '', '']
+No raw affiliation match: https://openalex.org/W2932319281 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3035131649 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2971342441 ['', '', '']
+No raw affiliation match: https://openalex.org/W3037724138 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3115851078 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2740210681 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963062785 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2404620314 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2964168155 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2970562710 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3146670357 ['', '', '']
+No raw affiliation match: https://openalex.org/W2053878386 ['Embrapa Amazônia Oriental, Trav. Dr. Enéas Pinheiro s/n°, Caixa Postal, 48, CEP 66095-100 Belém, PA, Brazil', 'Embrapa Amazônia Oriental, Trav. Dr. Enéas Pinheiro s/n°, Caixa Postal, 48, CEP 66095-100 Belém, PA, Brazil', 'Departamento de Biologia Geral Universidade Federal de Viçosa (UFV) Viçosa Minas Gerais Brazil', 'Embrapa Amazônia Ocidental, Rodovia AM 010, km 29, Caixa Postal 319, CEP 69010-970 Manaus, AM, Brazil', 'Embrapa Amazônia Ocidental, Rodovia AM 010, km 29, Caixa Postal 319, CEP 69010-970 Manaus, AM, Brazil', 'Marborges Agroindústria S.A., Rodovia Virgílio Serrão Sacramento, km 56, s/n, Caixa Postal 17, CEP 68 450-000 Mojú, Pará, Brazil', 'Marborges Agroindústria S.A., Rodovia Virgílio Serrão Sacramento, km 56, s/n, Caixa Postal 17, CEP 68 450-000 Mojú, Pará, Brazil']
+No raw affiliation match: https://openalex.org/W2752630748 ['', '']
+No raw affiliation match: https://openalex.org/W2941649920 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2530797269 ['Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Embrapa Amazônia Oriental, Travessa Doutor Enéas Pinheiro, CEP 66.095-903, Belém, PA, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Embrapa Amazônia Oriental, Travessa Doutor Enéas Pinheiro, CEP 66.095-903, Belém, PA, Brazil']
+No raw affiliation match: https://openalex.org/W2950846878 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2440926996 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2798583685 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2964315715 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3037181583 ['', '', '']
+No raw affiliation match: https://openalex.org/W2972954809 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2748594250 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2949270253 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2952307697 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2787049730 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2962700197 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963866450 ['', '', '']
+No raw affiliation match: https://openalex.org/W3102847511 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2513928851 ['', '', '']
+No raw affiliation match: https://openalex.org/W2965145066 ['', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W2741511332 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2935542736 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2955711416 ['', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3000642987 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2771630689 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2913153410 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962693275 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963471154 ['', '']
+No raw affiliation match: https://openalex.org/W2995455605 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2995653869 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2996463194 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2962830484 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963546161 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2977910558 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2990176236 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3030045039 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3168663263 ['Univ. of Cambridge', 'Univ. of Cambridge', 'Univ. of Cambridge', 'Univ. of Cambridge', 'Univ. of Cambridge', '', "King's College London", 'Facebook']
+No raw affiliation match: https://openalex.org/W2739724844 ['', '', '']
+No raw affiliation match: https://openalex.org/W2965158072 ['', '']
+No raw affiliation match: https://openalex.org/W2970799668 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2972838300 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2973230496 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3007978994 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3105081824 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2797297135 ['', '']
+No raw affiliation match: https://openalex.org/W2949370368 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2965734314 ['', '']
+No raw affiliation match: https://openalex.org/W2966246399 ['', '', '']
+No raw affiliation match: https://openalex.org/W2971200681 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2972549707 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3036435426 ['University of Washington ;', 'University of Washington ;', '', 'University of Washington ;']
+No raw affiliation match: https://openalex.org/W3037333676 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3098938591 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3102021588 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3102649892 ['', '', '']
+No raw affiliation match: https://openalex.org/W3198664535 ['Bristol Doctoral College', '', '']
+No raw affiliation match: https://openalex.org/W2568095718 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2759511005 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2808456396 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963891006 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2969307504 ['', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W2970687683 ['', '', '']
+No raw affiliation match: https://openalex.org/W3093818688 ['', '', '']
+No raw affiliation match: https://openalex.org/W3115091907 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3170943566 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2921071577 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2951575093 ['', '#N#‡#N#Georgia Institute of Technology#N#', '#N#‡#N#Georgia Institute of Technology#N#']
+No raw affiliation match: https://openalex.org/W2970403389 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2996680032 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3102303514 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3104866818 ['', '']
+No raw affiliation match: https://openalex.org/W3111605943 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3117752211 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3169436550 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2609616693 ['', '', '']
+No raw affiliation match: https://openalex.org/W2741018521 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2748488613 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2787178450 ['Carnegie Mellon University', 'Carnegie Mellon University', '', '']
+No raw affiliation match: https://openalex.org/W2790259362 ['', '', '']
+No raw affiliation match: https://openalex.org/W2889736774 ['', '']
+No raw affiliation match: https://openalex.org/W2972384212 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2973227003 ['', 'Amazon', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2985600242 ['', '', '']
+No raw affiliation match: https://openalex.org/W3035753785 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3094953545 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3095735913 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3099225546 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3100879603 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2574856563 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2607593044 ['', '', '']
+No raw affiliation match: https://openalex.org/W2764124976 ['', '']
+No raw affiliation match: https://openalex.org/W2783719374 ['', '', '']
+No raw affiliation match: https://openalex.org/W2803971899 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2805097732 ['', '', '']
+No raw affiliation match: https://openalex.org/W2907475315 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2912901814 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2912918913 ['', '', '']
+No raw affiliation match: https://openalex.org/W2949176913 ['Massachusetts Institute Of Technology#TAB#', 'Google,,,,,', 'Google,,,,,', '']
+No raw affiliation match: https://openalex.org/W2964038586 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2972930415 ['', '', '']
+No raw affiliation match: https://openalex.org/W3034272764 ['', '', '']
+No raw affiliation match: https://openalex.org/W3037093830 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3043574444 ['University of California–Berkeley.', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3093155142 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3100400430 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3104194380 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3105184920 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2784023976 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2834342720 ['', '']
+No raw affiliation match: https://openalex.org/W2965920802 ['', '', '']
+No raw affiliation match: https://openalex.org/W2970020110 ['']
+No raw affiliation match: https://openalex.org/W2971064282 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2971310236 ['']
+No raw affiliation match: https://openalex.org/W2983689619 ['', '', '']
+No raw affiliation match: https://openalex.org/W2983722336 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3037600752 ['', '', '']
+No raw affiliation match: https://openalex.org/W3103978933 ['', '', '']
+No raw affiliation match: https://openalex.org/W3105580455 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3129089995 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3190185140 ['', '', '']
+No raw affiliation match: https://openalex.org/W3211005660 ['', '', '']
+No raw affiliation match: https://openalex.org/W2572569512 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2591784896 ['', '', '']
+No raw affiliation match: https://openalex.org/W2606602301 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2607957941 ['Universidade Federal de Vicosa, Viçosa, Brazil', 'Universidade Federal de Vicosa, Viçosa, Brazil', 'Embrapa Amazônia Ocidental', 'EMBRAPA/Florestas, Colombo, Brazil', 'Embrapa Amazônia Ocidental', 'Universidade Federal de Vicosa, Viçosa, Brazil']
+No raw affiliation match: https://openalex.org/W2885826215 ['', '']
+No raw affiliation match: https://openalex.org/W2962985479 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963360277 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2966111260 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2995444997 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3092956463 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3099971460 ['', '', '']
+No raw affiliation match: https://openalex.org/W1977557220 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2251165721 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2748606298 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2806804106 ['', '', '']
+No raw affiliation match: https://openalex.org/W2809456172 ['', '', '']
+No raw affiliation match: https://openalex.org/W2929139284 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2942943100 ['', '', '']
+No raw affiliation match: https://openalex.org/W2951657084 ['', '', '']
+No raw affiliation match: https://openalex.org/W2951688832 ['Univ. of Cambridge', 'Univ. of Cambridge', '', '']
+No raw affiliation match: https://openalex.org/W2951876757 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2954465950 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963710187 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2965435631 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2966441967 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2970192826 ['University of California Santa Barbara', 'Google,,,,,', 'Carnegie Mellon University', '']
+No raw affiliation match: https://openalex.org/W2970379104 ['Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society', 'Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society', '']
+No raw affiliation match: https://openalex.org/W2971715690 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2975704529 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2995574330 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3028954259 ['', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3035639219 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3038036095 ['', '']
+No raw affiliation match: https://openalex.org/W3093557617 ['', '', '', 'National University of Singapore,']
+No raw affiliation match: https://openalex.org/W3099417667 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3100387437 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3101154177 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3120777408 ['', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3130986574 ['Amazon', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3138310836 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3199004261 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3214013345 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W1893496786 ['Universidade Federal de Viçosa, Viçosa, Brasil', 'Universidade Federal de Viçosa, Viçosa, Brasil', 'Embrapa Amazônia Oriental,  Brasil', 'Embrapa Florestas, Colombo, Brasil', 'Universidade Federal de Viçosa, Viçosa, Brasil']
+No raw affiliation match: https://openalex.org/W2186169017 ['Centro de Pesquisa Agloflorestal de Roraima, Brasil', 'Embrapa Agrossilvipastoril, Sinop, Brasil.', 'Centro Nacional de Pesquisa de Florestas, Colombo, Brasil', 'Embrapa Amazônia Oriental, Brasil']
+No raw affiliation match: https://openalex.org/W2294378299 ['', '']
+No raw affiliation match: https://openalex.org/W2476743944 ['', '', '']
+No raw affiliation match: https://openalex.org/W2741102098 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2755926663 ['', '']
+No raw affiliation match: https://openalex.org/W2762483932 ['', '', '']
+No raw affiliation match: https://openalex.org/W2802455203 ['', '', '']
+No raw affiliation match: https://openalex.org/W2804744697 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2806957444 ['', '']
+No raw affiliation match: https://openalex.org/W2888195294 ['', '']
+No raw affiliation match: https://openalex.org/W2890884631 ['', '', '']
+No raw affiliation match: https://openalex.org/W2924551963 ['', 'Google,,,,,']
+No raw affiliation match: https://openalex.org/W2949488962 ['', '', '']
+No raw affiliation match: https://openalex.org/W2952907575 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962896386 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963645036 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2971327614 ['', '']
+No raw affiliation match: https://openalex.org/W2972297975 ['', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W2986670164 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3021046937 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3034799022 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3047199820 ['', '', '']
+No raw affiliation match: https://openalex.org/W3054608853 ['', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3096746890 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3108508289 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3158088536 ['', '', '']
+No raw affiliation match: https://openalex.org/W3163695726 ['', '', '', '', '', '', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W2293535060 ['SRI-International', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2606847791 [', , Brasil.', 'Embrapa Amazônia Oriental, Brasil', 'Embrapa Amazônia Oriental, Brasil', 'Embrapa Mandioca e Fruticultura, Cruz das Almas, BA, Brasil', 'Embrapa Amazônia Oriental, Brasil']
+No raw affiliation match: https://openalex.org/W2771346320 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2787770455 ['', '']
+No raw affiliation match: https://openalex.org/W2799150749 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2900175074 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2922234509 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2942580059 ['', '', '']
+No raw affiliation match: https://openalex.org/W2946444035 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2947647530 ['Univ. of California Davis', '', '', 'Univ. of California Davis', 'University of California-Los Angeles']
+No raw affiliation match: https://openalex.org/W2950420475 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963054052 ['', '']
+No raw affiliation match: https://openalex.org/W2980075309 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2985638129 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3006210468 ['', '', '']
+No raw affiliation match: https://openalex.org/W3048758284 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3092630929 ['', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3093159647 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3097469673 ['', '', '']
+No raw affiliation match: https://openalex.org/W3098331497 ['', '']
+No raw affiliation match: https://openalex.org/W3099372209 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3112707533 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3113459090 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3116343068 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3128997953 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3153899207 ['', '']
+No raw affiliation match: https://openalex.org/W3170280676 ['', '']
+No raw affiliation match: https://openalex.org/W3174293169 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3177112880 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3179307988 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3195529751 ['University of Macau,Department of Computer and Information Science,Macau,China', '', 'University of Macau,Department of Computer and Information Science,Macau,China']
+No raw affiliation match: https://openalex.org/W3212387080 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2143350841 ['', '', 'Universidade Federal do Espírito Santo', '', '', '', '', 'Universidade\xa0Federal do Rio Grande do Sul', '']
+No raw affiliation match: https://openalex.org/W2221612594 ['Indian Institute of Technology Kanpur', '']
+No raw affiliation match: https://openalex.org/W2741325996 ['', '', '']
+No raw affiliation match: https://openalex.org/W2745931053 ['', '', '']
+No raw affiliation match: https://openalex.org/W2747937300 ['LANCASTER UNIVERSITY,', 'Linköping University', '', '']
+No raw affiliation match: https://openalex.org/W2772956802 ['', '', '']
+No raw affiliation match: https://openalex.org/W2778098837 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2898152919 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2949736580 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2954154738 ['Instituto de Desenvolvimento Sustentável Mamirauá, Tefé, AM', 'Universidade Federal de Viçosa, Campus#R##N#Universitário, Viçosa, MG', 'EMBRAPA Amazônia Oriental, Belém, PA', 'Universidade Federal Rural da Amazônia, Campus Capitão Poço, Capitão Poço, PA', 'Universidade Federal de Viçosa, Campus#R##N#Universitário, Viçosa, MG', 'Universidade Federal de Viçosa, Campus#R##N#Universitário, Viçosa, MG', 'Universidade Federal de Viçosa, Campus#R##N#Universitário, Viçosa, MG', 'EMBRAPA Amazônia Oriental, Belém, PA', 'Universidade Federal do Recôncavo da Bahia, Cruz das Almas-BA', 'Universidade Federal do Sul da Bahia, Itabuna, BA']
+No raw affiliation match: https://openalex.org/W2963489350 ['', '']
+No raw affiliation match: https://openalex.org/W2966061665 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2970001856 ['Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society', '', 'Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society', 'Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society']
+No raw affiliation match: https://openalex.org/W2971727319 ['', '', '']
+No raw affiliation match: https://openalex.org/W2989919526 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3002279815 ['', '']
+No raw affiliation match: https://openalex.org/W3010872790 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3037361235 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3037501086 ['', '']
+No raw affiliation match: https://openalex.org/W3037562253 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3047821330 ['', '', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3092973380 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3093898938 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3097484451 ['', '']
+No raw affiliation match: https://openalex.org/W3100679627 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3105973526 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3110740243 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3114972653 ['', '']
+No raw affiliation match: https://openalex.org/W3117968175 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3157624638 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3157793776 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3158811267 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3166512924 ['', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3198633256 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3198973235 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3201234832 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3202216017 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3203598579 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3214125927 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W1842617815 ['Dept. of Electr. Eng. & Comput. Sci, Univ. of Michigan, Ann Arbor, MI, USA', '', 'Inst. for Robot. & Intell. Machines, Georgia Inst. of Technol., Atlanta, GA, USA', 'Dept. of Electr. Eng. & Comput. Sci, Univ. of Michigan, Ann Arbor, MI, USA', 'Dept. of Computer Science and Information Engineering, National Taiwan University of Science and Technology, Taipei, Taiwan#TAB#']
+No raw affiliation match: https://openalex.org/W2405490700 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2517120700 ['', '', '']
+No raw affiliation match: https://openalex.org/W2556277930 ['', '', '']
+No raw affiliation match: https://openalex.org/W2613023307 ['', '', '']
+No raw affiliation match: https://openalex.org/W2761970834 ['Universidade Federal do Amazonas – UFAM, Avenida General Rodrigo Otávio, 6200, Coroado I, 69.800-900, Manaus, AM, Brasil', 'Instituto de Ciências Exatas e Tecnologia, Universidade Federal do Amazonas -UFAM, Rua Nossa Senhora do Rosário, 3863, Tiradentes, 69.103-128, Itacoatiara, AM, Brasil', 'Embrapa Rondônia, Rodovia Br-364, km 5,5, Zona Rural, caixa postal 127, 76.815-800, Porto Velho, RO, Brasil', 'Embrapa Amazônia Ocidental, Rodovia AM-10, km 29, (Estrada Manaus/Itacoatiara), caixa postal 319, 69.010-970, Manaus, AM, Brasil', 'Embrapa Rondônia, Rodovia Br-364, km 5,5, Zona Rural, caixa postal 127, 76.815-800, Porto Velho, RO, Brasil']
+No raw affiliation match: https://openalex.org/W2794607286 ['', '', '']
+No raw affiliation match: https://openalex.org/W2835534053 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2941044520 ['', '', 'Amazon', 'Amazon', 'Amazon']
+No raw affiliation match: https://openalex.org/W2944332845 ['', 'Stanford University ()', '', '', 'Nanyang Technological Univ']
+No raw affiliation match: https://openalex.org/W2947329949 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2949126650 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2949336561 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2951539692 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2955318955 ['', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W2962702400 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963431600 ['', '']
+No raw affiliation match: https://openalex.org/W2964532051 ['Carnegie Mellon University', 'Google,,,,,', 'University of California Santa Barbara', '', 'Google,,,,,', 'Carnegie Mellon University']
+No raw affiliation match: https://openalex.org/W2964713509 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2970751055 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2971019013 ['', '', '']
+No raw affiliation match: https://openalex.org/W2974803251 ['', 'University of Edinburgh,']
+No raw affiliation match: https://openalex.org/W2979618889 ['', '']
+No raw affiliation match: https://openalex.org/W2980596743 ['', '', '', '', 'University of Notre Dame.']
+No raw affiliation match: https://openalex.org/W2990201487 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2995686152 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3009752645 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3015442441 ['', '', '']
+No raw affiliation match: https://openalex.org/W3021802247 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3023778123 ['', '', '']
+No raw affiliation match: https://openalex.org/W3037386667 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3045737996 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3046609253 ['Amazon', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3048118011 ['', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3088291589 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3088860656 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3093346478 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3095995205 ['', '', '']
+No raw affiliation match: https://openalex.org/W3096157982 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3096572584 ['', 'Institute of Automation. Chinese Academy of Sciences', 'Institute of Automation. Chinese Academy of Sciences', '', '', '']
+No raw affiliation match: https://openalex.org/W3096588269 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3097731397 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3098281389 ['', '']
+No raw affiliation match: https://openalex.org/W3099438082 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3104098714 ['', '', '']
+No raw affiliation match: https://openalex.org/W3104752986 ['', '', '']
+No raw affiliation match: https://openalex.org/W3109833210 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3114586309 ['Amazon', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3115419395 ['', '']
+No raw affiliation match: https://openalex.org/W3117732268 ['', '', '']
+No raw affiliation match: https://openalex.org/W3137189276 ['Embrapa  Amazônia  Oriental', 'Embrapa  Amazônia  Ocidental', 'Embrapa  Amazônia  Ocidental', 'Grupo  Marborges', 'Embrapa Café', 'Embrapa  Amazônia  Oriental']
+No raw affiliation match: https://openalex.org/W3153201663 ['', '', 'Speechly', 'Speechly', '']
+No raw affiliation match: https://openalex.org/W3154151461 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3157777096 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3158218109 ['', '', '']
+No raw affiliation match: https://openalex.org/W3158731518 ['Statistics', '', 'Computer Science', '']
+No raw affiliation match: https://openalex.org/W3161801451 ['', '', '', '', 'Amazon', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3165877604 ['', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3166129584 ['', 'Amazon']
+No raw affiliation match: https://openalex.org/W3168415639 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3168872064 ['', '', '', '', '', 'Amazon', '']
+No raw affiliation match: https://openalex.org/W3170730117 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3170752662 ['', '']
+No raw affiliation match: https://openalex.org/W3171469166 ['', '', '']
+No raw affiliation match: https://openalex.org/W3175179074 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3176048559 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3182974197 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3183691183 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3183925776 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3196193831 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3197575580 ['', '', '']
+No raw affiliation match: https://openalex.org/W3198028464 ['', '']
+No raw affiliation match: https://openalex.org/W3198604552 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3199117450 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3202074632 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3209015562 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211589367 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3213189432 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3213249234 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W4220969210 ['ISAC-Institute of Atmospheric Sciences and Climate, CNR, Italy', 'Departamento de Fisica, Universidade Federal de Santa Maria, Santa Maria, RS, Brazil; ISAC-Institute of Atmospheric Sciences and Climate, CNR, Italy', 'Department of Physics, Federal Institute of Para (IFPA), Belem, PA, Brazil; Instituto Nacional de Pesquisas da Amazonia (INPA-CLIAMB), Manaus, AM, Brazil', 'Instituto Nacional de Pesquisas da Amazonia (INPA-CLIAMB), Manaus, AM, Brazil', 'Departamento de Fisica, Universidade Federal de Santa Maria, Santa Maria, RS, Brazil', 'Universidade Federal do Rio Grande do Norte, Natal, RN, Brazil', 'Department of Pure and Applied Sciences (DiSPeA), Universit`a degli Studi di Urbino ‘Carlo Bo’,Italy', 'Instituto Nacional de Pesquisas Espaciais (INPE), Cachoeira Paulista, SP, Brazil', 'Embrapa Amazônia Oriental, Tv. Dr. Enéas Piheiro, s/n, Marco, CEP 66095-903, Caixa postal 48, Belém, Pará, Brasil', 'Atmospheric Chemistry Department, Max Planck Institute for Chemistry, P.O. Box 3060, 55020 Mainz, Germany', 'Atmospheric Chemistry Department, Max Planck Institute for Chemistry, P.O. Box 3060, 55020 Mainz, Germany']
+No raw affiliation match: https://openalex.org/W4280591069 ['Institute of Atmospheric Sciences and Climate, Consiglio Nazionale delle Ricerche (ISAC-CNR), Italy; Universidade Federal de Santa Maria, Santa Maria, RS, Brazil', 'Department of Physics, Federal Institute of Pará (IFPA), Belém, PA, Brazil; Instituto Nacional de Pesquisas da Amazônia (INPA-CLIAMB), Manaus, AM, Brazil', 'Universidade Federal de Santa Maria, Santa Maria, RS, Brazil', 'Universidade Federal do Rio Grande do Norte, Natal, RN, Brazil', 'Atmospheric Chemistry Department, Max Planck Institute for Chemistry, P.O. Box 3060, Mainz 55020, Germany', 'Atmospheric Chemistry Department, Max Planck Institute for Chemistry, P.O. Box 3060, Mainz 55020, Germany', 'Instituto Nacional de Pesquisas Espaciais (INPE), Cachoeira Paulista, SP, Brazil', 'Embrapa Amazônia Oriental, Tv. Dr. Enéas Piheiro, s/n, Marco, Caixa postal 48, Belém, Pará CEP 66095-903, Brasil', 'Instituto Nacional de Pesquisas da Amazônia (INPA-CLIAMB), Manaus, AM, Brazil', 'Universidade Federal de Santa Maria, Santa Maria, RS, Brazil', 'Department of Pure and Applied Sciences (DiSPeA), Università degli Studi di Urbino ‘Carlo 20 \xa0Bo,Italy', 'Institute of Atmospheric Sciences and Climate, Consiglio Nazionale delle Ricerche (ISAC-CNR), Italy']
+No raw affiliation match: https://openalex.org/W4295736883 ['Universidade Federal Rural da Amazônia', 'Universidade Estadual de Santa Cruz', 'Universidade Federal do Pará', 'Universidade Federal Rural da Amazônia', 'Universidade Federal Rural da Amazônia', 'Universidade Federal Rural da Amazônia', 'Universidade Federal do Pará', 'Universidade Federal do Pará', 'EMBRAPA - Amazônia Oriental', 'EMBRAPA - Amazônia Oriental']
+No raw affiliation match: https://openalex.org/W4311799494 ['Embrapa Amazônia Oriental,  Brasil', 'Associação em Áreas de Assentamento no Estado do Maranhão,  Brasil']
+No raw affiliation match: https://openalex.org/W1604162242 ['', '']
+No raw affiliation match: https://openalex.org/W1605239498 ['Universidade Federal Rural da Amazônia/Laboratório de Química Ambiental', 'Instituto Sócio Ambiental e dos Recursos Hídricos, Universidade Federal Rural da Amazônia', 'Laboratório de Ecologia Tropical, Universidade Federal Rural da Amazônia', 'Instituto de Saúde e Produção Animal, Universidade Federal Rural da Amazônia', 'Laboratório de Oceanografia Química, Universidade Federal do Pará', 'Laboratório de Modelagem de Oceano e Estuários Amazônicos, Universidade Federal do Pará,']
+No raw affiliation match: https://openalex.org/W2252121457 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2274713498 ['Fiocruz Amazônia, Manaus, Brasil', 'Universidade Federal do Amazonas, Manaus, Brasil', 'Universidade Federal do Amazonas, Manaus, Brasil', 'Universidade Federal do Amazonas, Manaus, Brasil', 'Universidade Federal do Amazonas, Manaus, Brasil']
+No raw affiliation match: https://openalex.org/W2407574685 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2561366912 ['', '']
+No raw affiliation match: https://openalex.org/W2589171594 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2734873886 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2745331734 ['', '']
+No raw affiliation match: https://openalex.org/W2748059655 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2786558381 ['']
+No raw affiliation match: https://openalex.org/W2795142274 ['', '']
+No raw affiliation match: https://openalex.org/W2796310298 ['', '', '']
+No raw affiliation match: https://openalex.org/W2798400986 ['', '']
+No raw affiliation match: https://openalex.org/W2809544018 ['', '', '']
+No raw affiliation match: https://openalex.org/W2886787567 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2889261359 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2891581340 ['', '', '']
+No raw affiliation match: https://openalex.org/W2900742068 ['', '']
+No raw affiliation match: https://openalex.org/W2901786754 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2905963024 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2907718847 ['', '', '']
+No raw affiliation match: https://openalex.org/W2913321241 ['', '', '']
+No raw affiliation match: https://openalex.org/W2913676469 ['', '', '']
+No raw affiliation match: https://openalex.org/W2913895095 ['', '']
+No raw affiliation match: https://openalex.org/W2918708074 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2925841463 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2929514213 ['[Polytechnic University of Catalonia]', '', '']
+No raw affiliation match: https://openalex.org/W2943283021 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2946120184 ['', '']
+No raw affiliation match: https://openalex.org/W2946918168 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2947805651 ['', '', '']
+No raw affiliation match: https://openalex.org/W2950085610 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2951945518 ['', '', '']
+No raw affiliation match: https://openalex.org/W2952073206 ['', '']
+No raw affiliation match: https://openalex.org/W2952181946 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2952573022 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2953343164 ['#N#Ghent University#N#', 'Amazon', '']
+No raw affiliation match: https://openalex.org/W2953829678 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962852244 ['', '']
+No raw affiliation match: https://openalex.org/W2962994328 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963005132 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2965719710 ['', '', '']
+No raw affiliation match: https://openalex.org/W2967996202 ['', 'University of Trento', '', '', '', 'University of Trento']
+No raw affiliation match: https://openalex.org/W2973259188 ['', '', 'Amazon', '']
+No raw affiliation match: https://openalex.org/W2975039599 ['', '', '', 'Amazon', '']
+No raw affiliation match: https://openalex.org/W2977857619 ['']
+No raw affiliation match: https://openalex.org/W2982191902 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2984941262 ['', '', '']
+No raw affiliation match: https://openalex.org/W2985401038 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2992448548 ['', 'Amazon']
+No raw affiliation match: https://openalex.org/W2995912923 ['', '', '']
+No raw affiliation match: https://openalex.org/W2998188541 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3006583220 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3009224979 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3012821910 ['', '', '']
+No raw affiliation match: https://openalex.org/W3022047811 ['', '', '']
+No raw affiliation match: https://openalex.org/W3022504608 ['AMC-UvA, Faculteit der Geneeskunde, Amsterdam.; Contact: E.M. Corazolla (e.m.corazolla@amc.uva.nl).', 'AMC-UvA, Faculteit der Geneeskunde, Amsterdam.']
+No raw affiliation match: https://openalex.org/W3028344666 ['', '']
+No raw affiliation match: https://openalex.org/W3030853545 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3032085273 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3032479101 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3035971792 ['', '', '']
+No raw affiliation match: https://openalex.org/W3037625829 ['', '', '']
+No raw affiliation match: https://openalex.org/W3043672964 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3046037827 ['', '', '', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3047765285 ['University of California-Los Angeles', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3047778367 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3049700909 ['Embrapa Amazônia Oriental', 'Embrapa Amapá', 'EMBRAPA Café']
+No raw affiliation match: https://openalex.org/W3082961799 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3088026546 ['', '', 'University of Illinois at #TAB#Chicago', '', '', '', '', 'Stanford University ()']
+No raw affiliation match: https://openalex.org/W3089408321 ['', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3091291905 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3091930027 ['University of Washington ;', 'University of Washington ;', '', '']
+No raw affiliation match: https://openalex.org/W3092244061 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3092330976 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3092597737 ['', 'Amazon', '', '', '']
+No raw affiliation match: https://openalex.org/W3092751673 ['', '', '', 'University of Illinois at #TAB#Chicago']
+No raw affiliation match: https://openalex.org/W3092858501 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3092898576 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3093318556 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3094200245 ['', 'Amazon']
+No raw affiliation match: https://openalex.org/W3095483206 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3097696666 ['', '', '', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3099478794 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3102851939 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3103946812 ['', '', '']
+No raw affiliation match: https://openalex.org/W3104956656 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3105510767 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3107050089 ['', '', '']
+No raw affiliation match: https://openalex.org/W3110060343 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3110116204 ['', '']
+No raw affiliation match: https://openalex.org/W3111720488 ['', '', 'Amazon', '', '', '']
+No raw affiliation match: https://openalex.org/W3112578001 ['', '']
+No raw affiliation match: https://openalex.org/W3114052161 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3114054075 ['', '', '']
+No raw affiliation match: https://openalex.org/W3114469455 ['', '', '']
+No raw affiliation match: https://openalex.org/W3116743531 ['']
+No raw affiliation match: https://openalex.org/W3116836881 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3117576622 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3130744522 ['Statistics', '', 'Computer Science', '']
+No raw affiliation match: https://openalex.org/W3132094881 ['', '']
+No raw affiliation match: https://openalex.org/W3134456927 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3134968238 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3138743673 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3139291533 ['', '', '']
+No raw affiliation match: https://openalex.org/W3139395121 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3145814661 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3148242746 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3148717649 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3153403682 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3153823621 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3154023792 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3154697502 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3156856719 ['university of liverpool', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3159484337 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3161318417 ['Univ. of Cambridge', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3163149064 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3163416817 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3164019749 [' University of Alberta.', '', '', '']
+No raw affiliation match: https://openalex.org/W3165500975 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3166077906 ['Amazon', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3167217740 ['', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3167597168 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3168898150 ['', '']
+No raw affiliation match: https://openalex.org/W3170116649 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3171023288 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3171338328 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3171586554 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3172741267 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3172759730 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3172843532 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3174968164 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3175392547 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3176594410 ['', '', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3176922303 ['University of Tübingen', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3177245035 ['', '']
+No raw affiliation match: https://openalex.org/W3177924560 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3178511319 ['', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3178969538 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3180451736 ['', '', '', '', '', '', '', '', 'Amazon']
+No raw affiliation match: https://openalex.org/W3182650612 ['', '', '']
+No raw affiliation match: https://openalex.org/W3183101145 ['', '', '']
+No raw affiliation match: https://openalex.org/W3183487010 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3183764363 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3183773282 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3183961407 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3184769649 ['Amazônia Azul Tecnologias de Defesa S.A', 'Universidade Federal do ABC']
+No raw affiliation match: https://openalex.org/W3185363765 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3186326110 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3187629856 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3191229722 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3193142144 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3195005096 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3196742893 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3197859266 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3198090350 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3198298942 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3198802347 ['', '']
+No raw affiliation match: https://openalex.org/W3201464248 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3201691278 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3202220749 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3202695546 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3204383925 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3204711568 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3204884380 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3204887348 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3206097584 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3206758163 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3208285837 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211094980 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211326730 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211347421 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211416406 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211471094 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3211483953 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211537168 ['', '', '']
+No raw affiliation match: https://openalex.org/W3211621949 ['', '', '']
+No raw affiliation match: https://openalex.org/W3211655567 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211689061 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3211785525 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3211807237 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211907575 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3212018716 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212022443 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212072588 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3212279921 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212331733 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212393417 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212512850 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212589816 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212667563 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212813607 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213019773 ['', '', '']
+No raw affiliation match: https://openalex.org/W3213244327 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213295925 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213388042 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3213517177 ['', '', '']
+No raw affiliation match: https://openalex.org/W3213548503 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213581612 ['', '']
+No raw affiliation match: https://openalex.org/W3213611638 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213622222 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213629725 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213633136 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3213666479 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3213810112 ['', '', '']
+No raw affiliation match: https://openalex.org/W3213870597 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213941187 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213952306 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3214103984 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3214117304 ['', '']
+No raw affiliation match: https://openalex.org/W3214138850 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3214145914 ['', '']
+No raw affiliation match: https://openalex.org/W3214234943 ['', '', '']
+No raw affiliation match: https://openalex.org/W3214485347 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3214495526 ['', '', '']
+No raw affiliation match: https://openalex.org/W3216352276 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W4283021327 ['Departamento de agronomia Universidade Federal de Viçosa  Viçosa MG 36570‐900 Brazil', 'Departamento de agronomia Universidade Federal de Viçosa  Viçosa MG 36570‐900 Brazil', 'Departamento de agronomia Universidade Federal de Viçosa  Viçosa MG 36570‐900 Brazil; Instituto Nacional de Ciência e Tecnologia do Café  Lavras MG 37200‐900 Brazil', 'Embrapa Amazônia Oriental  Belém PA Brazil', 'Universidade Federal de Lavras  Lavras MG 37200‐900 Brazil', "Comissão Executiva do Plano da Lavoura Cacaueira – CEPLAC  Ouro Preto D'Oeste 76920‐000 Brazil"]
+No raw affiliation match: https://openalex.org/W4287021305 ['Amazônia Azul Tecnologias de Defesa S.A.', 'Polytechnic School of the University of São Paulo (Brazil)', 'Centre Automatique et Systèmes; QUANTum Information Circuits']
+No raw affiliation match: https://openalex.org/W4296613428 ['Universidade Federal do Rio Grande do Sul, Departamento de Cirurgia e Ortopedia, Divisão de Radiologia Odontológica e Imaginologia, Porto Alegre, Rio Grande do Sul, Brasil', 'Universidade Federal do Rio Grande do Sul, Departamento de Odontologia Conservadora, Divisão de Endodontia, Porto Alegre, Rio Grande do Sul, Brasil.', 'Escola Superior da Amazônia, Departamento de Diagnóstico Bucal, Belém, Pará, Brasil', 'Universidade Federal do Rio Grande do Sul, Departamento de Cirurgia e Ortopedia, Divisão de Radiologia Odontológica e Imaginologia, Porto Alegre, Rio Grande do Sul, Brasil', 'Universidade Federal do Rio Grande do Sul, Departamento de Cirurgia e Ortopedia, Divisão de Radiologia Odontológica e Imaginologia, Porto Alegre, Rio Grande do Sul, Brasil', 'Universidade Federal do Rio Grande do Sul, Departamento de Cirurgia e Ortopedia, Divisão de Radiologia Odontológica e Imaginologia, Porto Alegre, Rio Grande do Sul, Brasil']
+No raw affiliation match: https://openalex.org/W4299323293 ['Amazônia Azul Tecnologias de Defesa S.A.', 'Polytechnic School of the University of São Paulo (Brazil)', 'Centre Automatique et Systèmes; QUANTum Information Circuits']
+    Works: 2405
+    Raw affiliation count: 1768
+    Raw affiliation fraction: 0.7351351351351352
+```
+
+- Using all Amazon institutions:
+
+```
+Raw affiliation keywords: ['amazon']
+No raw affiliation match: https://openalex.org/W2963961878 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963423916 ['', '', '']
+No raw affiliation match: https://openalex.org/W2405578611 ['']
+No raw affiliation match: https://openalex.org/W2964222566 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2890410208 ['', '', '']
+No raw affiliation match: https://openalex.org/W2970697704 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962717849 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963352809 ['', '']
+No raw affiliation match: https://openalex.org/W2971105107 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2889928394 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2804292122 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2995589713 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963419583 ['', '', '']
+No raw affiliation match: https://openalex.org/W2787733970 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963633299 ['', '']
+No raw affiliation match: https://openalex.org/W3034255912 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2792839479 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2952113915 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963809789 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2964092925 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962739340 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963569817 ['', '', '']
+No raw affiliation match: https://openalex.org/W3030754432 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2798761464 ['']
+No raw affiliation match: https://openalex.org/W2891146651 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2908007030 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963973577 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2991522342 ['', '', '']
+No raw affiliation match: https://openalex.org/W2987154291 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2885950361 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2897003273 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3114916066 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2898917980 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2971274354 ['', '', '']
+No raw affiliation match: https://openalex.org/W2995636882 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3106484161 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2985353426 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963547384 ['', '']
+No raw affiliation match: https://openalex.org/W2963756980 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2803533564 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963499433 ['', '', '']
+No raw affiliation match: https://openalex.org/W2970176896 ['', '', '']
+No raw affiliation match: https://openalex.org/W2572670101 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963162885 ['', '', '']
+No raw affiliation match: https://openalex.org/W2972425456 ['', '', '']
+No raw affiliation match: https://openalex.org/W2950695840 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2970421227 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963532386 ['']
+No raw affiliation match: https://openalex.org/W2964123521 ['', '', '']
+No raw affiliation match: https://openalex.org/W2396230943 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2945315238 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962682420 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2986068180 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963882293 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2964022663 ['', '', '']
+No raw affiliation match: https://openalex.org/W2932319281 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3035131649 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2971342441 ['', '', '']
+No raw affiliation match: https://openalex.org/W3115851078 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2740210681 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963062785 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2404620314 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2964168155 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2970562710 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3146670357 ['', '', '']
+No raw affiliation match: https://openalex.org/W2053878386 ['Embrapa Amazônia Oriental, Trav. Dr. Enéas Pinheiro s/n°, Caixa Postal, 48, CEP 66095-100 Belém, PA, Brazil', 'Embrapa Amazônia Oriental, Trav. Dr. Enéas Pinheiro s/n°, Caixa Postal, 48, CEP 66095-100 Belém, PA, Brazil', 'Departamento de Biologia Geral Universidade Federal de Viçosa (UFV) Viçosa Minas Gerais Brazil', 'Embrapa Amazônia Ocidental, Rodovia AM 010, km 29, Caixa Postal 319, CEP 69010-970 Manaus, AM, Brazil', 'Embrapa Amazônia Ocidental, Rodovia AM 010, km 29, Caixa Postal 319, CEP 69010-970 Manaus, AM, Brazil', 'Marborges Agroindústria S.A., Rodovia Virgílio Serrão Sacramento, km 56, s/n, Caixa Postal 17, CEP 68 450-000 Mojú, Pará, Brazil', 'Marborges Agroindústria S.A., Rodovia Virgílio Serrão Sacramento, km 56, s/n, Caixa Postal 17, CEP 68 450-000 Mojú, Pará, Brazil']
+No raw affiliation match: https://openalex.org/W2941649920 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2530797269 ['Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Embrapa Amazônia Oriental, Travessa Doutor Enéas Pinheiro, CEP 66.095-903, Belém, PA, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Universidade Federal de Viçosa, Campus Universitário de Viçosa, Departamento de Engenharia Florestal, Avenida Peter Henry Rolfs, s/n, CEP 36.570-900, Viçosa, MG, Brazil', 'Embrapa Amazônia Oriental, Travessa Doutor Enéas Pinheiro, CEP 66.095-903, Belém, PA, Brazil']
+No raw affiliation match: https://openalex.org/W2950846878 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2798583685 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2964315715 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3037181583 ['', '', '']
+No raw affiliation match: https://openalex.org/W2748594250 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2952307697 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962700197 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963866450 ['', '', '']
+No raw affiliation match: https://openalex.org/W3102847511 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2741511332 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2935542736 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3000642987 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2913153410 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962693275 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963471154 ['', '']
+No raw affiliation match: https://openalex.org/W2995455605 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2995653869 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2996463194 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2962830484 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963546161 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2977910558 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2990176236 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3030045039 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3168663263 ['Univ. of Cambridge', 'Univ. of Cambridge', 'Univ. of Cambridge', 'Univ. of Cambridge', 'Univ. of Cambridge', '', "King's College London", 'Facebook']
+No raw affiliation match: https://openalex.org/W2739724844 ['', '', '']
+No raw affiliation match: https://openalex.org/W2965158072 ['', '']
+No raw affiliation match: https://openalex.org/W2970799668 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2972838300 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2973230496 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3105081824 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2949370368 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2965734314 ['', '']
+No raw affiliation match: https://openalex.org/W2966246399 ['', '', '']
+No raw affiliation match: https://openalex.org/W2971200681 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2972549707 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3036435426 ['University of Washington ;', 'University of Washington ;', '', 'University of Washington ;']
+No raw affiliation match: https://openalex.org/W3037333676 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3098938591 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3102021588 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3102649892 ['', '', '']
+No raw affiliation match: https://openalex.org/W3198664535 ['Bristol Doctoral College', '', '']
+No raw affiliation match: https://openalex.org/W2568095718 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2759511005 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2808456396 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963891006 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2970687683 ['', '', '']
+No raw affiliation match: https://openalex.org/W3093818688 ['', '', '']
+No raw affiliation match: https://openalex.org/W3115091907 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3170943566 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2921071577 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2951575093 ['', '#N#‡#N#Georgia Institute of Technology#N#', '#N#‡#N#Georgia Institute of Technology#N#']
+No raw affiliation match: https://openalex.org/W2970403389 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2996680032 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3102303514 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3104866818 ['', '']
+No raw affiliation match: https://openalex.org/W3111605943 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3117752211 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3169436550 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2741018521 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2748488613 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2787178450 ['Carnegie Mellon University', 'Carnegie Mellon University', '', '']
+No raw affiliation match: https://openalex.org/W2790259362 ['', '', '']
+No raw affiliation match: https://openalex.org/W2889736774 ['', '']
+No raw affiliation match: https://openalex.org/W2972384212 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2985600242 ['', '', '']
+No raw affiliation match: https://openalex.org/W3035753785 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3094953545 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3095735913 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3099225546 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3100879603 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2574856563 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2607593044 ['', '', '']
+No raw affiliation match: https://openalex.org/W2764124976 ['', '']
+No raw affiliation match: https://openalex.org/W2783719374 ['', '', '']
+No raw affiliation match: https://openalex.org/W2803971899 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2907475315 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2912901814 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2912918913 ['', '', '']
+No raw affiliation match: https://openalex.org/W2949176913 ['Massachusetts Institute Of Technology#TAB#', 'Google,,,,,', 'Google,,,,,', '']
+No raw affiliation match: https://openalex.org/W2964038586 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2972930415 ['', '', '']
+No raw affiliation match: https://openalex.org/W3034272764 ['', '', '']
+No raw affiliation match: https://openalex.org/W3037093830 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3093155142 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3100400430 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3104194380 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3105184920 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2784023976 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2834342720 ['', '']
+No raw affiliation match: https://openalex.org/W2965920802 ['', '', '']
+No raw affiliation match: https://openalex.org/W2970020110 ['']
+No raw affiliation match: https://openalex.org/W2971064282 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2971310236 ['']
+No raw affiliation match: https://openalex.org/W2983689619 ['', '', '']
+No raw affiliation match: https://openalex.org/W2983722336 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3037600752 ['', '', '']
+No raw affiliation match: https://openalex.org/W3103978933 ['', '', '']
+No raw affiliation match: https://openalex.org/W3105580455 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3129089995 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3211005660 ['', '', '']
+No raw affiliation match: https://openalex.org/W2572569512 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2591784896 ['', '', '']
+No raw affiliation match: https://openalex.org/W2607957941 ['Universidade Federal de Vicosa, Viçosa, Brazil', 'Universidade Federal de Vicosa, Viçosa, Brazil', 'Embrapa Amazônia Ocidental', 'EMBRAPA/Florestas, Colombo, Brazil', 'Embrapa Amazônia Ocidental', 'Universidade Federal de Vicosa, Viçosa, Brazil']
+No raw affiliation match: https://openalex.org/W2885826215 ['', '']
+No raw affiliation match: https://openalex.org/W2962985479 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963360277 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3092956463 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3099971460 ['', '', '']
+No raw affiliation match: https://openalex.org/W1977557220 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2251165721 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2806804106 ['', '', '']
+No raw affiliation match: https://openalex.org/W2929139284 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2942943100 ['', '', '']
+No raw affiliation match: https://openalex.org/W2951657084 ['', '', '']
+No raw affiliation match: https://openalex.org/W2951688832 ['Univ. of Cambridge', 'Univ. of Cambridge', '', '']
+No raw affiliation match: https://openalex.org/W2951876757 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2954465950 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2963710187 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2965435631 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2966441967 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2970192826 ['University of California Santa Barbara', 'Google,,,,,', 'Carnegie Mellon University', '']
+No raw affiliation match: https://openalex.org/W2970379104 ['Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society', 'Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society', '']
+No raw affiliation match: https://openalex.org/W2975704529 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2995574330 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3028954259 ['', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3035639219 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3038036095 ['', '']
+No raw affiliation match: https://openalex.org/W3093557617 ['', '', '', 'National University of Singapore,']
+No raw affiliation match: https://openalex.org/W3100387437 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3138310836 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3199004261 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3214013345 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W1893496786 ['Universidade Federal de Viçosa, Viçosa, Brasil', 'Universidade Federal de Viçosa, Viçosa, Brasil', 'Embrapa Amazônia Oriental,  Brasil', 'Embrapa Florestas, Colombo, Brasil', 'Universidade Federal de Viçosa, Viçosa, Brasil']
+No raw affiliation match: https://openalex.org/W2186169017 ['Centro de Pesquisa Agloflorestal de Roraima, Brasil', 'Embrapa Agrossilvipastoril, Sinop, Brasil.', 'Centro Nacional de Pesquisa de Florestas, Colombo, Brasil', 'Embrapa Amazônia Oriental, Brasil']
+No raw affiliation match: https://openalex.org/W2294378299 ['', '']
+No raw affiliation match: https://openalex.org/W2476743944 ['', '', '']
+No raw affiliation match: https://openalex.org/W2741102098 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2755926663 ['', '']
+No raw affiliation match: https://openalex.org/W2762483932 ['', '', '']
+No raw affiliation match: https://openalex.org/W2802455203 ['', '', '']
+No raw affiliation match: https://openalex.org/W2806957444 ['', '']
+No raw affiliation match: https://openalex.org/W2888195294 ['', '']
+No raw affiliation match: https://openalex.org/W2890884631 ['', '', '']
+No raw affiliation match: https://openalex.org/W2924551963 ['', 'Google,,,,,']
+No raw affiliation match: https://openalex.org/W2949488962 ['', '', '']
+No raw affiliation match: https://openalex.org/W2952907575 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2962896386 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963645036 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2971327614 ['', '']
+No raw affiliation match: https://openalex.org/W2986670164 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3021046937 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3034799022 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3047199820 ['', '', '']
+No raw affiliation match: https://openalex.org/W3096746890 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3108508289 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3158088536 ['', '', '']
+No raw affiliation match: https://openalex.org/W2293535060 ['SRI-International', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2606847791 [', , Brasil.', 'Embrapa Amazônia Oriental, Brasil', 'Embrapa Amazônia Oriental, Brasil', 'Embrapa Mandioca e Fruticultura, Cruz das Almas, BA, Brasil', 'Embrapa Amazônia Oriental, Brasil']
+No raw affiliation match: https://openalex.org/W2771346320 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2922234509 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2946444035 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2947647530 ['Univ. of California Davis', '', '', 'Univ. of California Davis', 'University of California-Los Angeles']
+No raw affiliation match: https://openalex.org/W2950420475 ['', '', '']
+No raw affiliation match: https://openalex.org/W2963054052 ['', '']
+No raw affiliation match: https://openalex.org/W2980075309 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2985638129 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3006210468 ['', '', '']
+No raw affiliation match: https://openalex.org/W3048758284 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3097469673 ['', '', '']
+No raw affiliation match: https://openalex.org/W3098331497 ['', '']
+No raw affiliation match: https://openalex.org/W3099372209 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3112707533 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3113459090 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3128997953 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3153899207 ['', '']
+No raw affiliation match: https://openalex.org/W3170280676 ['', '']
+No raw affiliation match: https://openalex.org/W3177112880 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3179307988 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3195529751 ['University of Macau,Department of Computer and Information Science,Macau,China', '', 'University of Macau,Department of Computer and Information Science,Macau,China']
+No raw affiliation match: https://openalex.org/W3212387080 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2143350841 ['', '', 'Universidade Federal do Espírito Santo', '', '', '', '', 'Universidade\xa0Federal do Rio Grande do Sul', '']
+No raw affiliation match: https://openalex.org/W2221612594 ['Indian Institute of Technology Kanpur', '']
+No raw affiliation match: https://openalex.org/W2741325996 ['', '', '']
+No raw affiliation match: https://openalex.org/W2745931053 ['', '', '']
+No raw affiliation match: https://openalex.org/W2747937300 ['LANCASTER UNIVERSITY,', 'Linköping University', '', '']
+No raw affiliation match: https://openalex.org/W2778098837 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2898152919 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2949736580 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2954154738 ['Instituto de Desenvolvimento Sustentável Mamirauá, Tefé, AM', 'Universidade Federal de Viçosa, Campus#R##N#Universitário, Viçosa, MG', 'EMBRAPA Amazônia Oriental, Belém, PA', 'Universidade Federal Rural da Amazônia, Campus Capitão Poço, Capitão Poço, PA', 'Universidade Federal de Viçosa, Campus#R##N#Universitário, Viçosa, MG', 'Universidade Federal de Viçosa, Campus#R##N#Universitário, Viçosa, MG', 'Universidade Federal de Viçosa, Campus#R##N#Universitário, Viçosa, MG', 'EMBRAPA Amazônia Oriental, Belém, PA', 'Universidade Federal do Recôncavo da Bahia, Cruz das Almas-BA', 'Universidade Federal do Sul da Bahia, Itabuna, BA']
+No raw affiliation match: https://openalex.org/W2963489350 ['', '']
+No raw affiliation match: https://openalex.org/W2966061665 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2970001856 ['Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society', '', 'Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society', 'Dept. Empirical Inference, Max Planck Institute for Intelligent Systems, Max Planck Society']
+No raw affiliation match: https://openalex.org/W2989919526 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3002279815 ['', '']
+No raw affiliation match: https://openalex.org/W3010872790 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3037501086 ['', '']
+No raw affiliation match: https://openalex.org/W3037562253 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3092973380 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3093898938 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3097484451 ['', '']
+No raw affiliation match: https://openalex.org/W3105973526 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3110740243 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3114972653 ['', '']
+No raw affiliation match: https://openalex.org/W3117968175 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3157624638 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3157793776 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3158811267 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3198973235 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3201234832 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3203598579 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3214125927 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W1842617815 ['Dept. of Electr. Eng. & Comput. Sci, Univ. of Michigan, Ann Arbor, MI, USA', '', 'Inst. for Robot. & Intell. Machines, Georgia Inst. of Technol., Atlanta, GA, USA', 'Dept. of Electr. Eng. & Comput. Sci, Univ. of Michigan, Ann Arbor, MI, USA', 'Dept. of Computer Science and Information Engineering, National Taiwan University of Science and Technology, Taipei, Taiwan#TAB#']
+No raw affiliation match: https://openalex.org/W2405490700 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2517120700 ['', '', '']
+No raw affiliation match: https://openalex.org/W2613023307 ['', '', '']
+No raw affiliation match: https://openalex.org/W2761970834 ['Universidade Federal do Amazonas – UFAM, Avenida General Rodrigo Otávio, 6200, Coroado I, 69.800-900, Manaus, AM, Brasil', 'Instituto de Ciências Exatas e Tecnologia, Universidade Federal do Amazonas -UFAM, Rua Nossa Senhora do Rosário, 3863, Tiradentes, 69.103-128, Itacoatiara, AM, Brasil', 'Embrapa Rondônia, Rodovia Br-364, km 5,5, Zona Rural, caixa postal 127, 76.815-800, Porto Velho, RO, Brasil', 'Embrapa Amazônia Ocidental, Rodovia AM-10, km 29, (Estrada Manaus/Itacoatiara), caixa postal 319, 69.010-970, Manaus, AM, Brasil', 'Embrapa Rondônia, Rodovia Br-364, km 5,5, Zona Rural, caixa postal 127, 76.815-800, Porto Velho, RO, Brasil']
+No raw affiliation match: https://openalex.org/W2835534053 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2951539692 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963431600 ['', '']
+No raw affiliation match: https://openalex.org/W2964713509 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2971019013 ['', '', '']
+No raw affiliation match: https://openalex.org/W2979618889 ['', '']
+No raw affiliation match: https://openalex.org/W2980596743 ['', '', '', '', 'University of Notre Dame.']
+No raw affiliation match: https://openalex.org/W2990201487 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3009752645 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3021802247 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3023778123 ['', '', '']
+No raw affiliation match: https://openalex.org/W3045737996 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3088291589 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3088860656 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3093346478 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3096157982 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3096572584 ['', 'Institute of Automation. Chinese Academy of Sciences', 'Institute of Automation. Chinese Academy of Sciences', '', '', '']
+No raw affiliation match: https://openalex.org/W3096588269 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3097731397 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3098281389 ['', '']
+No raw affiliation match: https://openalex.org/W3099438082 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3104098714 ['', '', '']
+No raw affiliation match: https://openalex.org/W3104752986 ['', '', '']
+No raw affiliation match: https://openalex.org/W3109833210 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3115419395 ['', '']
+No raw affiliation match: https://openalex.org/W3117732268 ['', '', '']
+No raw affiliation match: https://openalex.org/W3137189276 ['Embrapa  Amazônia  Oriental', 'Embrapa  Amazônia  Ocidental', 'Embrapa  Amazônia  Ocidental', 'Grupo  Marborges', 'Embrapa Café', 'Embrapa  Amazônia  Oriental']
+No raw affiliation match: https://openalex.org/W3153201663 ['', '', 'Speechly', 'Speechly', '']
+No raw affiliation match: https://openalex.org/W3154151461 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3158218109 ['', '', '']
+No raw affiliation match: https://openalex.org/W3158731518 ['Statistics', '', 'Computer Science', '']
+No raw affiliation match: https://openalex.org/W3168415639 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3170730117 ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3170752662 ['', '']
+No raw affiliation match: https://openalex.org/W3171469166 ['', '', '']
+No raw affiliation match: https://openalex.org/W3175179074 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3176048559 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3182974197 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3183691183 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3197575580 ['', '', '']
+No raw affiliation match: https://openalex.org/W3198604552 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3199117450 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3202074632 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3209015562 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211589367 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3213189432 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3213249234 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W4220969210 ['ISAC-Institute of Atmospheric Sciences and Climate, CNR, Italy', 'Departamento de Fisica, Universidade Federal de Santa Maria, Santa Maria, RS, Brazil; ISAC-Institute of Atmospheric Sciences and Climate, CNR, Italy', 'Department of Physics, Federal Institute of Para (IFPA), Belem, PA, Brazil; Instituto Nacional de Pesquisas da Amazonia (INPA-CLIAMB), Manaus, AM, Brazil', 'Instituto Nacional de Pesquisas da Amazonia (INPA-CLIAMB), Manaus, AM, Brazil', 'Departamento de Fisica, Universidade Federal de Santa Maria, Santa Maria, RS, Brazil', 'Universidade Federal do Rio Grande do Norte, Natal, RN, Brazil', 'Department of Pure and Applied Sciences (DiSPeA), Universit`a degli Studi di Urbino ‘Carlo Bo’,Italy', 'Instituto Nacional de Pesquisas Espaciais (INPE), Cachoeira Paulista, SP, Brazil', 'Embrapa Amazônia Oriental, Tv. Dr. Enéas Piheiro, s/n, Marco, CEP 66095-903, Caixa postal 48, Belém, Pará, Brasil', 'Atmospheric Chemistry Department, Max Planck Institute for Chemistry, P.O. Box 3060, 55020 Mainz, Germany', 'Atmospheric Chemistry Department, Max Planck Institute for Chemistry, P.O. Box 3060, 55020 Mainz, Germany']
+No raw affiliation match: https://openalex.org/W4280591069 ['Institute of Atmospheric Sciences and Climate, Consiglio Nazionale delle Ricerche (ISAC-CNR), Italy; Universidade Federal de Santa Maria, Santa Maria, RS, Brazil', 'Department of Physics, Federal Institute of Pará (IFPA), Belém, PA, Brazil; Instituto Nacional de Pesquisas da Amazônia (INPA-CLIAMB), Manaus, AM, Brazil', 'Universidade Federal de Santa Maria, Santa Maria, RS, Brazil', 'Universidade Federal do Rio Grande do Norte, Natal, RN, Brazil', 'Atmospheric Chemistry Department, Max Planck Institute for Chemistry, P.O. Box 3060, Mainz 55020, Germany', 'Atmospheric Chemistry Department, Max Planck Institute for Chemistry, P.O. Box 3060, Mainz 55020, Germany', 'Instituto Nacional de Pesquisas Espaciais (INPE), Cachoeira Paulista, SP, Brazil', 'Embrapa Amazônia Oriental, Tv. Dr. Enéas Piheiro, s/n, Marco, Caixa postal 48, Belém, Pará CEP 66095-903, Brasil', 'Instituto Nacional de Pesquisas da Amazônia (INPA-CLIAMB), Manaus, AM, Brazil', 'Universidade Federal de Santa Maria, Santa Maria, RS, Brazil', 'Department of Pure and Applied Sciences (DiSPeA), Università degli Studi di Urbino ‘Carlo 20 \xa0Bo,Italy', 'Institute of Atmospheric Sciences and Climate, Consiglio Nazionale delle Ricerche (ISAC-CNR), Italy']
+No raw affiliation match: https://openalex.org/W4295736883 ['Universidade Federal Rural da Amazônia', 'Universidade Estadual de Santa Cruz', 'Universidade Federal do Pará', 'Universidade Federal Rural da Amazônia', 'Universidade Federal Rural da Amazônia', 'Universidade Federal Rural da Amazônia', 'Universidade Federal do Pará', 'Universidade Federal do Pará', 'EMBRAPA - Amazônia Oriental', 'EMBRAPA - Amazônia Oriental']
+No raw affiliation match: https://openalex.org/W4311799494 ['Embrapa Amazônia Oriental,  Brasil', 'Associação em Áreas de Assentamento no Estado do Maranhão,  Brasil']
+No raw affiliation match: https://openalex.org/W1604162242 ['', '']
+No raw affiliation match: https://openalex.org/W1605239498 ['Universidade Federal Rural da Amazônia/Laboratório de Química Ambiental', 'Instituto Sócio Ambiental e dos Recursos Hídricos, Universidade Federal Rural da Amazônia', 'Laboratório de Ecologia Tropical, Universidade Federal Rural da Amazônia', 'Instituto de Saúde e Produção Animal, Universidade Federal Rural da Amazônia', 'Laboratório de Oceanografia Química, Universidade Federal do Pará', 'Laboratório de Modelagem de Oceano e Estuários Amazônicos, Universidade Federal do Pará,']
+No raw affiliation match: https://openalex.org/W2252121457 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2274713498 ['Fiocruz Amazônia, Manaus, Brasil', 'Universidade Federal do Amazonas, Manaus, Brasil', 'Universidade Federal do Amazonas, Manaus, Brasil', 'Universidade Federal do Amazonas, Manaus, Brasil', 'Universidade Federal do Amazonas, Manaus, Brasil']
+No raw affiliation match: https://openalex.org/W2407574685 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2561366912 ['', '']
+No raw affiliation match: https://openalex.org/W2734873886 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2745331734 ['', '']
+No raw affiliation match: https://openalex.org/W2748059655 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2796310298 ['', '', '']
+No raw affiliation match: https://openalex.org/W2889261359 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2891581340 ['', '', '']
+No raw affiliation match: https://openalex.org/W2900742068 ['', '']
+No raw affiliation match: https://openalex.org/W2901786754 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2907718847 ['', '', '']
+No raw affiliation match: https://openalex.org/W2913676469 ['', '', '']
+No raw affiliation match: https://openalex.org/W2913895095 ['', '']
+No raw affiliation match: https://openalex.org/W2918708074 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2925841463 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2929514213 ['[Polytechnic University of Catalonia]', '', '']
+No raw affiliation match: https://openalex.org/W2946120184 ['', '']
+No raw affiliation match: https://openalex.org/W2950085610 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2952181946 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2952573022 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2963005132 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W2965719710 ['', '', '']
+No raw affiliation match: https://openalex.org/W2967996202 ['', 'University of Trento', '', '', '', 'University of Trento']
+No raw affiliation match: https://openalex.org/W2977857619 ['']
+No raw affiliation match: https://openalex.org/W2982191902 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W2984941262 ['', '', '']
+No raw affiliation match: https://openalex.org/W2995912923 ['', '', '']
+No raw affiliation match: https://openalex.org/W2998188541 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3012821910 ['', '', '']
+No raw affiliation match: https://openalex.org/W3022047811 ['', '', '']
+No raw affiliation match: https://openalex.org/W3022504608 ['AMC-UvA, Faculteit der Geneeskunde, Amsterdam.; Contact: E.M. Corazolla (e.m.corazolla@amc.uva.nl).', 'AMC-UvA, Faculteit der Geneeskunde, Amsterdam.']
+No raw affiliation match: https://openalex.org/W3028344666 ['', '']
+No raw affiliation match: https://openalex.org/W3032085273 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3032479101 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3047778367 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3049700909 ['Embrapa Amazônia Oriental', 'Embrapa Amapá', 'EMBRAPA Café']
+No raw affiliation match: https://openalex.org/W3082961799 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3088026546 ['', '', 'University of Illinois at #TAB#Chicago', '', '', '', '', 'Stanford University ()']
+No raw affiliation match: https://openalex.org/W3092244061 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3092751673 ['', '', '', 'University of Illinois at #TAB#Chicago']
+No raw affiliation match: https://openalex.org/W3092858501 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3095483206 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3102851939 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3105510767 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3107050089 ['', '', '']
+No raw affiliation match: https://openalex.org/W3110060343 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3110116204 ['', '']
+No raw affiliation match: https://openalex.org/W3114052161 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3114054075 ['', '', '']
+No raw affiliation match: https://openalex.org/W3114469455 ['', '', '']
+No raw affiliation match: https://openalex.org/W3116743531 ['']
+No raw affiliation match: https://openalex.org/W3116836881 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3117576622 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3132094881 ['', '']
+No raw affiliation match: https://openalex.org/W3134456927 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3138743673 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3139291533 ['', '', '']
+No raw affiliation match: https://openalex.org/W3139395121 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3145814661 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3148717649 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3153403682 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3154697502 ['', '', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3159484337 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3163149064 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3163416817 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3164019749 [' University of Alberta.', '', '', '']
+No raw affiliation match: https://openalex.org/W3165500975 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3167597168 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3168898150 ['', '']
+No raw affiliation match: https://openalex.org/W3170116649 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3171023288 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3171338328 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3171586554 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3172741267 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3172843532 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3174968164 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3175392547 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3176922303 ['University of Tübingen', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3177245035 ['', '']
+No raw affiliation match: https://openalex.org/W3177924560 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3178969538 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3182650612 ['', '', '']
+No raw affiliation match: https://openalex.org/W3183101145 ['', '', '']
+No raw affiliation match: https://openalex.org/W3183487010 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3183764363 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3184769649 ['Amazônia Azul Tecnologias de Defesa S.A', 'Universidade Federal do ABC']
+No raw affiliation match: https://openalex.org/W3186326110 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3191229722 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3193142144 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3196742893 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3197859266 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3198090350 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3198802347 ['', '']
+No raw affiliation match: https://openalex.org/W3201464248 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3201691278 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3202220749 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3204383925 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3206097584 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3206758163 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3208285837 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211094980 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211326730 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211347421 ['', '', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211416406 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211471094 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3211483953 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211537168 ['', '', '']
+No raw affiliation match: https://openalex.org/W3211621949 ['', '', '']
+No raw affiliation match: https://openalex.org/W3211655567 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3211689061 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3211785525 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3212072588 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3212279921 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212331733 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212393417 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3212667563 ['', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213019773 ['', '', '']
+No raw affiliation match: https://openalex.org/W3213244327 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213295925 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213388042 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3213611638 ['', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213633136 ['', '', '', '']
+No raw affiliation match: https://openalex.org/W3213810112 ['', '', '']
+No raw affiliation match: https://openalex.org/W3213870597 ['', '', '', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3213941187 ['', '', '', '', '', '']
+No raw affiliation match: https://openalex.org/W3214117304 ['', '']
+No raw affiliation match: https://openalex.org/W3214145914 ['', '']
+No raw affiliation match: https://openalex.org/W3214234943 ['', '', '']
+No raw affiliation match: https://openalex.org/W3214495526 ['', '', '']
+No raw affiliation match: https://openalex.org/W4283021327 ['Departamento de agronomia Universidade Federal de Viçosa  Viçosa MG 36570‐900 Brazil', 'Departamento de agronomia Universidade Federal de Viçosa  Viçosa MG 36570‐900 Brazil', 'Departamento de agronomia Universidade Federal de Viçosa  Viçosa MG 36570‐900 Brazil; Instituto Nacional de Ciência e Tecnologia do Café  Lavras MG 37200‐900 Brazil', 'Embrapa Amazônia Oriental  Belém PA Brazil', 'Universidade Federal de Lavras  Lavras MG 37200‐900 Brazil', "Comissão Executiva do Plano da Lavoura Cacaueira – CEPLAC  Ouro Preto D'Oeste 76920‐000 Brazil"]
+No raw affiliation match: https://openalex.org/W4287021305 ['Amazônia Azul Tecnologias de Defesa S.A.', 'Polytechnic School of the University of São Paulo (Brazil)', 'Centre Automatique et Systèmes; QUANTum Information Circuits']
+No raw affiliation match: https://openalex.org/W4296613428 ['Universidade Federal do Rio Grande do Sul, Departamento de Cirurgia e Ortopedia, Divisão de Radiologia Odontológica e Imaginologia, Porto Alegre, Rio Grande do Sul, Brasil', 'Universidade Federal do Rio Grande do Sul, Departamento de Odontologia Conservadora, Divisão de Endodontia, Porto Alegre, Rio Grande do Sul, Brasil.', 'Escola Superior da Amazônia, Departamento de Diagnóstico Bucal, Belém, Pará, Brasil', 'Universidade Federal do Rio Grande do Sul, Departamento de Cirurgia e Ortopedia, Divisão de Radiologia Odontológica e Imaginologia, Porto Alegre, Rio Grande do Sul, Brasil', 'Universidade Federal do Rio Grande do Sul, Departamento de Cirurgia e Ortopedia, Divisão de Radiologia Odontológica e Imaginologia, Porto Alegre, Rio Grande do Sul, Brasil', 'Universidade Federal do Rio Grande do Sul, Departamento de Cirurgia e Ortopedia, Divisão de Radiologia Odontológica e Imaginologia, Porto Alegre, Rio Grande do Sul, Brasil']
+No raw affiliation match: https://openalex.org/W3158484638 ['Institute of Technology and Education Galileo da Amazônia - ITEGAM', 'Institute of Technology and Education Galileo da Amazônia - ITEGAM', 'Institute of Technology and Education Galileo da Amazônia - ITEGAM', 'Institute of Technology and Education Galileo da Amazônia - ITEGAM', 'Institute of Technology and Education Galileo da Amazônia - ITEGAM', 'Institute of Technology and Education Galileo da Amazônia - ITEGAM']
+No raw affiliation match: https://openalex.org/W2550688362 ['Universidad Central “Marta Abreu” de Las Villas - Cuba', 'Universidad Central “Marta Abreu” de Las Villas - Cuba', 'Universidad Central “Marta Abreu” de Las Villas - Cuba', 'Universidad Central “Marta Abreu” de Las Villas - Cuba', 'Universidad Central “Marta Abreu” de Las Villas - Cuba', 'Instituto de Tecnologia Galileo da Amazônia']
+No raw affiliation match: https://openalex.org/W2969384402 ['Escola Superior Batista da Amazônia', 'Escola Superior Batista da Amazônia', 'Universidade Federal de Itajubá']
+No raw affiliation match: https://openalex.org/W3014098445 ['Instituto de Tecnologia Educação Galileo da Amazônia', 'Industrial and Systems Engineering Department, Technology Center, Federal University of Santa #R##N#Catarina', 'Industrial and Systems Engineering Department, Technology Center, Federal University of Santa #R##N#Catarina']
+    Works: 3044
+    Raw affiliation count: 2569
+    Raw affiliation fraction: 0.8439553219448095
+```
+
+- Number of non-matches went down
+- But still a lot of cases with entirely empty strings for raw affiliation
+- Example: 'https://openalex.org/W2963961878'
+  - Author: Christos Christodoulopoulos. Affiliated with Amazon (United States). But raw_affiliation_string is empty.
+  - Website https://christos-c.com/ suggests that they are indeed with Amazon.
+  - The paper https://aclanthology.org/N18-1074.pdf says "Amazon Research Cambridge"
+  - So it is picking up on the info in the paper, it seems. Just failed to record the raw affiliation string.
+  - Weird how this problem is so much more pronounced for Amazon than SenseTime, OpenAI, DeepMind. Is it partly because Amazon just has more papers, so it's more likely to occur? That can't explain all of it because the _rate_ of non-match is much lower.
+- Google
+
+```
+    Works: 10292
+    Raw affiliation count: 8424
+    Raw affiliation fraction: 0.8184998056743101
+```
+
+  - Pretty low
+  - But every non-match has empty raw affiliation strings for Google affiliations (verified this in code)
+    - Checking one example of non-match with empty string, the affiliation is Google. Same as with the one example from Amazon.
+    - Checking another example (https://openalex.org/W2963310665), the affiliation is DeepMind. Ok, so it's definitely not perfect in these cases.
+    - A third example (https://openalex.org/W2962843773) is correctly Google 
+    - Based on this evidence I bet that OpenAlex is mostly getting these cases right
+- We could just cut all the potential false positives (even the ones with empty strings, that might be mostly right). We would only lose like 20% of the data. Potentially worth it to reduce error.
+- Microsoft:
+
+```
+    Works: 14960
+    Raw affiliation count: 13278
+    Diff: 1682
+    Affiliation with empty raw string count: 1674
+    Raw affiliation fraction: 0.8875668449197861
+```
+
+  - Mostly the empty raw string case
+  - Why is the number of no matches at all (155) much smaller than the number of no matches?
+    - I think it's a case of any vs. all. If any Microsoft affiliations have no match in the raw string, that counts towards 1682. If all Microsoft affiliations have no match in the raw string, that counts towards 155. However, Microsoft does seem unusual in having a large difference between these numbers, compared to the companies I've looked at so far.
+
+For now I'm just going to measure the rate of false positives in a rough way. It's better than nothing.
+
+```
+{'Adobe': 0.8805474906677727,
+ 'Alibaba': 0.9272624753312658,
+ 'Amazon': 0.8445901639344262,
+ 'Baidu': 0.8728943338437979,
+ 'DeepMind': 0.9824561403508771,
+ 'Google': 0.8185350689722168,
+ 'Group Sense': 0.9786931818181818,
+ 'Huawei': 0.9106606606606606,
+ 'IBM': 0.8880985774393909,
+ 'Intel': 0.9620328257860391,
+ 'NEC': 0.9565217391304348,
+ 'Naver': 0.8396694214876033,
+ 'Netflix': 0.9265536723163842,
+ 'Nvidia': 0.9189526184538653,
+ 'Meta': 0.8218934911242604,
+ 'Microsoft': 0.8883103010881901,
+ 'OpenAI': 1.0,
+ 'Salesforce': 1.0,
+ 'Tencent': 0.897364771151179,
+ 'Twitter': 0.9449275362318841,
+ 'Uber': 0.782051282051282,
+ 'Xerox': 0.8087954110898662,
+ 'Yandex': 0.8862745098039215,
+ 'Enthought': 1.0,
+ 'Quansight': 1.0}
+```
+
+# 2023-Oct-26
+
+## Effect of citation count horizon
+
+Default: 3-year horizon
+
+Comparison to 1-year horizon
+
+- Citations
+  - 1-year horizon results in fewer total citations, as you'd expect
+  - Ranking of top 5 companies is identical
+  - Intel moves from 6th to 8th
+  - Alibaba moves from 11th to 9th; Adobe moves from 9th to 11th
+  - Twitter and Salesforce move up one rank
+- Citations per author
+  - Less citations all around as you'd expect.
+  - Slightly less spread vertically; y-axis is 2 to 20 rather than 5 to 100
+  - Meta moves down relative to OpenAI, gets around the same as DeepMind (~13 citations per author)
+  - Other than that, not much relative change. Just small movements.
+
+Comparison to 13-year horizon
+
+- Citations
+  - Ranking of top 6 companies is identical
+  - Microsoft gets closer to Google; only 6.5k citations apart
+  - Tencent moves from 7th to 9th; Adobe moves from 9th to 7th
+  - Baidu moves from 13th to 11th
+  - A couple other stragglers move ...
+- Citations per author
+  - More citations all around as you'd expect
+  - More spread vertically; leaders pull further ahead (y-axis is 20 to 200)
+  - Meta moves to just surpass OpenAI (!); DeepMind pulls away from SenseTime
+  - Baidu pulls ahead of the remaining Chinese companies, but still well below the US leaders
+  - Remaining Chinese companies are still bunched low down
+
+Comparison from 5-year to 13-year horizon
+
+- Citations
+  - Only Baidu and Xerox move up two ranks
+
+## Significance tests
+
+Mann-Whitney U-test
+
+Running 1000-iteration bootstrap
+
+Without bootstrapping - just looking at citation distributions
+
+- So basically comparing medians 
+
+```
+OpenAI: sample_size=163, mean=125.06, median=40.00
+DeepMind: sample_size=755, mean=91.37, median=9.00
+U statistic: 82856.5
+Common language effect size: 0.6732742859464511
+P-value: 3.3046184119745824e-12
+
+DeepMind: sample_size=755, mean=91.37, median=9.00
+Meta: sample_size=3329, mean=56.34, median=7.00
+U statistic: 1321799.5
+Common language effect size: 0.5259020169929518
+P-value: 0.02550132814119708
+
+Meta: sample_size=3329, mean=56.34, median=7.00
+Google: sample_size=10094, mean=42.90, median=6.00
+U statistic: 17509800.0
+Common language effect size: 0.5210796226495276
+P-value: 0.00024323255887518514
+
+DeepMind: sample_size=755, mean=91.37, median=9.00
+SenseTime: sample_size=677, mean=40.59, median=7.00
+U statistic: 269390.5
+Common language effect size: 0.5270437359992957
+P-value: 0.07550946625709978
+
+Meta: sample_size=3329, mean=56.34, median=7.00
+SenseTime: sample_size=677, mean=40.59, median=7.00
+U statistic: 1130491.5
+Common language effect size: 0.5016084425262443
+P-value: 0.8944704725031989
+
+Google: sample_size=10094, mean=42.90, median=6.00
+Microsoft: sample_size=14550, mean=23.11, median=5.00
+U statistic: 77623307.5
+Common language effect size: 0.5285253837297105
+P-value: 1.7603900311941404e-14
+
+Microsoft: sample_size=14550, mean=23.11, median=5.00
+Baidu: sample_size=1920, mean=18.89, median=3.00
+U statistic: 15209581.0
+Common language effect size: 0.5444437643184421
+P-value: 1.7926411666094342e-10
+
+Microsoft: sample_size=14550, mean=23.11, median=5.00
+Tencent: sample_size=3495, mean=16.06, median=3.00
+U statistic: 27650282.0
+Common language effect size: 0.5437376320615115
+P-value: 5.800135862795158e-16
+
+Microsoft: sample_size=14550, mean=23.11, median=5.00
+Alibaba: sample_size=3424, mean=12.11, median=3.00
+U statistic: 28288977.5
+Common language effect size: 0.5678328335260301
+P-value: 1.3954284708149238e-35
+
+Baidu: sample_size=1920, mean=18.89, median=3.00
+Tencent: sample_size=3495, mean=16.06, median=3.00
+U statistic: 3351130.0
+Common language effect size: 0.49939347877920837
+P-value: 0.940426519267788
+
+Baidu: sample_size=1920, mean=18.89, median=3.00
+Alibaba: sample_size=3424, mean=12.11, median=3.00
+U statistic: 3425506.5
+Common language effect size: 0.5210624908732476
+P-value: 0.009658506915015045
+
+Tencent: sample_size=3495, mean=16.06, median=3.00
+Alibaba: sample_size=3424, mean=12.11, median=3.00
+U statistic: 6248270.0
+Common language effect size: 0.5221302461460298
+P-value: 0.0012645664688033977
+
+Alibaba: sample_size=3424, mean=12.11, median=3.00
+Huawei: sample_size=5140, mean=10.69, median=2.00
+U statistic: 9516697.0
+Common language effect size: 0.5407410837666824
+P-value: 8.093556703400892e-11
+```
+
+# 2023-Oct-30
+
+## Citations accuracy check
+
+- I've done a basic version of this before but I think it would be good to have a more comprehensive version.
+- I think I just compared the top...10? 20? 25? most cited papers on OpenAlex with their corresponding entries in Semantic Scholar.
+- The differences were large on average, and the differences had high variance.
+- There's `openalex_scholar_comparison.ipynb` which analyses the top 10, by the looks.
+  - This is outdated. I'll update it with the current dataset.
+- `scholarly` (in turn Google Scholar) is not playing nice. It stops my queries after a few tries.
+  - What if I add some delay between queries?
+
+# 2023-Oct-31
+
+## Highlighting top companies
+
+The thought is to highlight Meta as a notable 3rd in addition to Google and OpenAI.
+
+Google:
+- 2nd on total publications
+- 1st on total citations
+- 6th on citations per author per year
+- 2nd on training compute
+- 1st on innovations
+
+OpenAI:
+- 23rd on total publications
+- 15th on total citations
+- 1st on citations per author per year
+- 1st on training compute
+- 2nd on innovations
+
+Meta:
+- 8th on total publications
+- 3rd on total citations
+- 2nd on citations per author per year
+- 5th on training compute
+- 3rd on innovations
+
+Microsoft:
+- 1st on total publications
+- 2nd on total citations
+- 7th on citations per author per year
+- 4th on training compute
+- N/A on innovations
+
+DeepMind:
+- 14th on total publications
+- 5th on total citations
+- 3rd on citations per author per year
+- 6th on training compute
+- 4th on innovations
+
+The heuristic we can use for highlighting a company overall is that they ranked in the top 3 on at least three of our metrics. Only Google, OpenAI and Meta qualify for that.
+
+## Citations accuracy check
+
+- Ratio of citation counts (semantic / openalex) for 1000 matching top-cited works, by company:
+
+```
+Meta (21 works)
+Mean ratio: 1.5007594666383515
+Median ratio: 1.4927536231884058
+Std ratio: 0.28873623764865153
+
+Google (998 works)
+Mean ratio: 1.4923204671397243
+Median ratio: 1.3365411307485888
+Std ratio: 0.692418465428409
+
+OpenAI (3 works)
+Mean ratio: 2.9860092048151614
+Median ratio: 1.603883495145631
+Std ratio: 2.231497640602872
+
+Quansight (2 works)
+Mean ratio: 1.0876724041264858
+Median ratio: 1.0876724041264858
+Std ratio: 0.026703016371383725
+
+Enthought (2 works)
+Mean ratio: 1.0876724041264858
+Median ratio: 1.0876724041264858
+Std ratio: 0.026703016371383725
+
+DeepMind (30 works)
+Mean ratio: 1.6867453971040465
+Median ratio: 1.3832881836945305
+Std ratio: 0.7568023483196492
+
+Microsoft (29 works)
+Mean ratio: 1.5047502914436783
+Median ratio: 1.373015873015873
+Std ratio: 0.5607579596539108
+
+IBM (18 works)
+Mean ratio: 1.2692999736820214
+Median ratio: 1.3011614401858305
+Std ratio: 0.5254183633629561
+
+Amazon (10 works)
+Mean ratio: 1.215530743331609
+Median ratio: 1.1994179600886916
+Std ratio: 0.1451136593667308
+
+Adobe (15 works)
+Mean ratio: 1.5088207886071665
+Median ratio: 1.4823529411764707
+Std ratio: 0.4117925247616801
+
+Netflix (2 works)
+Mean ratio: 1.2878478536869917
+Median ratio: 1.2878478536869917
+Std ratio: 0.17903956353155137
+
+Intel (8 works)
+Mean ratio: 1.37305465762082
+Median ratio: 1.247855392156863
+Std ratio: 0.29114282733392743
+
+Huawei (1 works)
+Mean ratio: 1.2182890855457227
+Median ratio: 1.2182890855457227
+Std ratio: 0.0
+
+Salesforce (1 works)
+Mean ratio: 1.2765273311897105
+Median ratio: 1.2765273311897105
+Std ratio: 0.0
+
+Baidu (3 works)
+Mean ratio: 1.2774423473668373
+Median ratio: 1.1971830985915493
+Std ratio: 0.2261731796598917
+
+Nvidia (4 works)
+Mean ratio: 1.6008835334016496
+Median ratio: 1.5970679012345679
+Std ratio: 0.4004531886376473
+
+Yandex (1 works)
+Mean ratio: 1.2448979591836735
+Median ratio: 1.2448979591836735
+Std ratio: 0.0
+
+NEC (3 works)
+Mean ratio: 1.3385015684201569
+Median ratio: 1.163716814159292
+Std ratio: 0.3112096959875053
+
+Twitter (1 works)
+Mean ratio: 1.5432692307692308
+Median ratio: 1.5432692307692308
+Std ratio: 0.0
+
+Tencent (2 works)
+Mean ratio: 2.461697722567288
+Median ratio: 2.461697722567288
+Std ratio: 0.8240165631469979
+
+Naver (1 works)
+Mean ratio: 1.0476190476190477
+Median ratio: 1.0476190476190477
+Std ratio: 0.0
+```
+
+- OpenAlex underestimates Meta, Google, Microsoft, Twitter similar to the overall average (1.5x)
+- OpenAlex more severely underestimates OpenAI (3.0x), Tencent (2.5x), DeepMind (1.7x), Nvidia (1.6x)
+  - I.e. OpenAlex disadvantaged these
+- OpenAlex less severely underestimates the rest
+  - I.e. OpenAlex advantaged these
+- Ok, the most consequential error seems to be Tencent. 
+  - Gah, actually there's just way too little data to fairly judge.
+  - To be fair, these are the biggest contributors for citations
+  - But I'd still want like 10x more samples for Tencent to judge it decently
+- This is only really gonna work if we process more of the dataset...
+  - 1000 works took ~30 minutes. So 10,000 works would take ~5 hours. It's doable as an experiment to leave cooking overnight.
+- This seems pretty important to check.
+- For this 1000-work set, I got 52 papers not found (potentially there are other errors but I think they are rarer). Heck, I may as well feed the whole dataset.
+
+# 2023-Nov-01
+
+## Preparing datasets for submission
+
+- Final publications dataset (including OpenAI amendment)
+  - JSON?
+  - Seems inappropriate to have a pickle file.
+  - From ChatGPT/twitter brief report:
+    - They use a link: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/PQYF6M
+    - The files include .pdf, .tab, .csv, .txt
+  - OpenAlex data looks like JSON, but is that the recommended format?
+  - OpenAlex snapshot data: https://docs.openalex.org/download-all-data/snapshot-data-format
+    - The data files are gzip-compressed JSON Lines, one row per entity
+  - I've saved the publications, selected institution IDs and institution aliases as three separate JSON Lines files. JSON Lines validator said they are valid.
+  - I can now load the data from the JSON Lines format and run the publication analysis as before.
+- Training compute dataset (CSV)
+  - Saved a CSV snapshot. Had to update the plot with new data - Huawei entered due to us adding PanGu-Sigma, knocking Amazon out of the top 10
+- Algorithmic innovation dataset (CSV)
+  - Saved a CSV snapshot of origins and occurrences. Will need to update this later in the week if I make changes.
+
+## Semantic scholar comparison
+
+- Final count: 42255/66093 [20:43:08<17:26:47, 2.63s/it]
+- New results overall (42255 works): mean ratio 1.9, median ratio 1.4, std in ratio 2.5
+
+- New results by industry:
+
+```
+Meta (89 works)
+Mean ratio: 1.896489463923849
+Median ratio: 1.5
+Std ratio: 2.3966775254687116
+
+Google (4745 works)
+Mean ratio: 2.125162511711967
+Median ratio: 1.446808510638298
+Std ratio: 3.163094871588936
+
+OpenAI (48 works)
+Mean ratio: 4.195710141475012
+Median ratio: 1.7225490196078432
+Std ratio: 10.123030634727396
+
+Quansight (2 works)
+Mean ratio: 1.0878747103236899
+Median ratio: 1.0878747103236899
+Std ratio: 0.026650220527771554
+
+Enthought (8 works)
+Mean ratio: 1.3421375634061228
+Median ratio: 1.0878747103236899
+Std ratio: 0.5436382899090877
+
+DeepMind (105 works)
+Mean ratio: 3.602968531075915
+Median ratio: 1.78
+Std ratio: 8.384972810243548
+
+Microsoft (6063 works)
+Mean ratio: 1.9897740057098392
+Median ratio: 1.4
+Std ratio: 3.0399758889439563
+
+IBM (6262 works)
+Mean ratio: 1.5940899080573192
+Median ratio: 1.3
+Std ratio: 2.040493327646889
+
+Amazon (1517 works)
+Mean ratio: 2.312106270683693
+Median ratio: 1.5041322314049588
+Std ratio: 2.93420658934553
+
+Adobe (1503 works)
+Mean ratio: 2.018958974526198
+Median ratio: 1.4
+Std ratio: 2.56179321311014
+
+Netflix (116 works)
+Mean ratio: 1.7066145168013023
+Median ratio: 1.4365079365079365
+Std ratio: 1.3188394430467636
+
+Intel (3162 works)
+Mean ratio: 1.5304073375544947
+Median ratio: 1.251481782154018
+Std ratio: 1.5031469045966916
+
+Huawei (2719 works)
+Mean ratio: 1.8590031653202637
+Median ratio: 1.3173076923076923
+Std ratio: 2.3013300935800287
+
+Salesforce (122 works)
+Mean ratio: 2.730892192212752
+Median ratio: 1.7171052631578947
+Std ratio: 2.669937271870611
+
+Baidu (1212 works)
+Mean ratio: 1.9553524367120914
+Median ratio: 1.4558441558441557
+Std ratio: 1.9580921394037805
+
+Nvidia (877 works)
+Mean ratio: 2.1296540292409865
+Median ratio: 1.5
+Std ratio: 2.4262642868759894
+
+Yandex (130 works)
+Mean ratio: 1.8705082271871645
+Median ratio: 1.4085850556438793
+Std ratio: 1.852654289996645
+
+NEC (826 works)
+Mean ratio: 1.544143939987172
+Median ratio: 1.25
+Std ratio: 1.5511629473173607
+
+Twitter (214 works)
+Mean ratio: 1.5433443217405982
+Median ratio: 1.1764705882352942
+Std ratio: 1.212086981991162
+
+Tencent (2345 works)
+Mean ratio: 2.087809403113888
+Median ratio: 1.4825581395348837
+Std ratio: 2.297856165083195
+
+Naver (341 works)
+Mean ratio: 2.135714036751277
+Median ratio: 1.5
+Std ratio: 1.8451477435620465
+
+Uber (101 works)
+Mean ratio: 2.3951002077014047
+Median ratio: 1.3333333333333333
+Std ratio: 6.218066478434155
+
+Alibaba (2262 works)
+Mean ratio: 2.1228645192955518
+Median ratio: 1.5656275635767023
+Std ratio: 2.1408981578173205
+
+Xerox (295 works)
+Mean ratio: 1.4120552646159417
+Median ratio: 1.3333333333333333
+Std ratio: 0.644365459542821
+
+Group Sense (498 works)
+Mean ratio: 2.059920063914083
+Median ratio: 1.4346153846153846
+Std ratio: 2.6202508495508545
+```
+
+- Companies whose citation counts are more underestimated than the average (1.9x): OpenAI (4.2x), DeepMind (3.6x), Amazon (2.3x), Salesforce (2.7x), Uber (2.4x)
+  - I.e. undervalued relative to other companies
+- Companies whose citation counts are less underestimated than the average (1.9x): Quansight (1.1x), Enthought (1.3x), IBM (1.6x), Netflix (1.7x), Intel (1.5x), NEC (1.5x), Twitter (1.5x), Xerox (1.4x)
+  - I.e. overvalued relative to other companies
+- Companies whose citation coutns are simialr to the average (1.9x): Meta (1.9x), Google (2.1x), Microsoft (2.0x), Adobe (2.0x), Huawei (1.9x), Baidu (2.0x), Nvidia (2.1x), Yandex (1.9x), Tencent (2.1x), Naver (2.1x), Alibaba (2.1x), SenseTime (2.1x)
+- Overall range of average ratios (excluding Quansight and Enthought) is 1.4 to 4.2x.
+- Would overall conclusions change if we adjusted for these differences in ratio?
+  - DeepMind relative to Meta? DeepMind would go up 1.9x in citations relative to Meta (3.6 / 1.9 ~= 1.9).
+  - Rough calc of change in total citations: 69000 * 3.6 = 248400.0; 188000 * 1.9 = 357200.0. Meta would still be ahead of DeepMind but much more similar.
+  - IBM sits in between them currently. IBM would become 105000 * 1.6 = 168000.0, falling behind DeepMind.
+  - OpenAI would move up a couple of ranks in total citations with the 4.2x multiplier, but still not be top 5. (4.2 * 20000 = 84000).
+  - DeepMind would pull ahead of Meta to place 2nd in citations per author.
+  - So consider the rankings of DeepMind again:
+    - 14th on total publications
+    - 4th on total citations
+    - 2nd on citations per author per year
+    - 6th on training compute
+    - 4th on innovations
+  - DeepMind still wouldn't meet our criteria of top 3 on 3 metrics to be a "highlight".
+  - Microsoft? No, there's no movement in or out of top 3.
