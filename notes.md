@@ -4319,3 +4319,358 @@ U statistic: 9516697.0
 Common language effect size: 0.5407410837666824
 P-value: 8.093556703400892e-11
 ```
+
+# 2023-Oct-30
+
+## Citations accuracy check
+
+- I've done a basic version of this before but I think it would be good to have a more comprehensive version.
+- I think I just compared the top...10? 20? 25? most cited papers on OpenAlex with their corresponding entries in Semantic Scholar.
+- The differences were large on average, and the differences had high variance.
+- There's `openalex_scholar_comparison.ipynb` which analyses the top 10, by the looks.
+  - This is outdated. I'll update it with the current dataset.
+- `scholarly` (in turn Google Scholar) is not playing nice. It stops my queries after a few tries.
+  - What if I add some delay between queries?
+
+# 2023-Oct-31
+
+## Highlighting top companies
+
+The thought is to highlight Meta as a notable 3rd in addition to Google and OpenAI.
+
+Google:
+- 2nd on total publications
+- 1st on total citations
+- 6th on citations per author per year
+- 2nd on training compute
+- 1st on innovations
+
+OpenAI:
+- 23rd on total publications
+- 15th on total citations
+- 1st on citations per author per year
+- 1st on training compute
+- 2nd on innovations
+
+Meta:
+- 8th on total publications
+- 3rd on total citations
+- 2nd on citations per author per year
+- 5th on training compute
+- 3rd on innovations
+
+Microsoft:
+- 1st on total publications
+- 2nd on total citations
+- 7th on citations per author per year
+- 4th on training compute
+- N/A on innovations
+
+DeepMind:
+- 14th on total publications
+- 5th on total citations
+- 3rd on citations per author per year
+- 6th on training compute
+- 4th on innovations
+
+The heuristic we can use for highlighting a company overall is that they ranked in the top 3 on at least three of our metrics. Only Google, OpenAI and Meta qualify for that.
+
+## Citations accuracy check
+
+- Ratio of citation counts (semantic / openalex) for 1000 matching top-cited works, by company:
+
+```
+Meta (21 works)
+Mean ratio: 1.5007594666383515
+Median ratio: 1.4927536231884058
+Std ratio: 0.28873623764865153
+
+Google (998 works)
+Mean ratio: 1.4923204671397243
+Median ratio: 1.3365411307485888
+Std ratio: 0.692418465428409
+
+OpenAI (3 works)
+Mean ratio: 2.9860092048151614
+Median ratio: 1.603883495145631
+Std ratio: 2.231497640602872
+
+Quansight (2 works)
+Mean ratio: 1.0876724041264858
+Median ratio: 1.0876724041264858
+Std ratio: 0.026703016371383725
+
+Enthought (2 works)
+Mean ratio: 1.0876724041264858
+Median ratio: 1.0876724041264858
+Std ratio: 0.026703016371383725
+
+DeepMind (30 works)
+Mean ratio: 1.6867453971040465
+Median ratio: 1.3832881836945305
+Std ratio: 0.7568023483196492
+
+Microsoft (29 works)
+Mean ratio: 1.5047502914436783
+Median ratio: 1.373015873015873
+Std ratio: 0.5607579596539108
+
+IBM (18 works)
+Mean ratio: 1.2692999736820214
+Median ratio: 1.3011614401858305
+Std ratio: 0.5254183633629561
+
+Amazon (10 works)
+Mean ratio: 1.215530743331609
+Median ratio: 1.1994179600886916
+Std ratio: 0.1451136593667308
+
+Adobe (15 works)
+Mean ratio: 1.5088207886071665
+Median ratio: 1.4823529411764707
+Std ratio: 0.4117925247616801
+
+Netflix (2 works)
+Mean ratio: 1.2878478536869917
+Median ratio: 1.2878478536869917
+Std ratio: 0.17903956353155137
+
+Intel (8 works)
+Mean ratio: 1.37305465762082
+Median ratio: 1.247855392156863
+Std ratio: 0.29114282733392743
+
+Huawei (1 works)
+Mean ratio: 1.2182890855457227
+Median ratio: 1.2182890855457227
+Std ratio: 0.0
+
+Salesforce (1 works)
+Mean ratio: 1.2765273311897105
+Median ratio: 1.2765273311897105
+Std ratio: 0.0
+
+Baidu (3 works)
+Mean ratio: 1.2774423473668373
+Median ratio: 1.1971830985915493
+Std ratio: 0.2261731796598917
+
+Nvidia (4 works)
+Mean ratio: 1.6008835334016496
+Median ratio: 1.5970679012345679
+Std ratio: 0.4004531886376473
+
+Yandex (1 works)
+Mean ratio: 1.2448979591836735
+Median ratio: 1.2448979591836735
+Std ratio: 0.0
+
+NEC (3 works)
+Mean ratio: 1.3385015684201569
+Median ratio: 1.163716814159292
+Std ratio: 0.3112096959875053
+
+Twitter (1 works)
+Mean ratio: 1.5432692307692308
+Median ratio: 1.5432692307692308
+Std ratio: 0.0
+
+Tencent (2 works)
+Mean ratio: 2.461697722567288
+Median ratio: 2.461697722567288
+Std ratio: 0.8240165631469979
+
+Naver (1 works)
+Mean ratio: 1.0476190476190477
+Median ratio: 1.0476190476190477
+Std ratio: 0.0
+```
+
+- OpenAlex underestimates Meta, Google, Microsoft, Twitter similar to the overall average (1.5x)
+- OpenAlex more severely underestimates OpenAI (3.0x), Tencent (2.5x), DeepMind (1.7x), Nvidia (1.6x)
+  - I.e. OpenAlex disadvantaged these
+- OpenAlex less severely underestimates the rest
+  - I.e. OpenAlex advantaged these
+- Ok, the most consequential error seems to be Tencent. 
+  - Gah, actually there's just way too little data to fairly judge.
+  - To be fair, these are the biggest contributors for citations
+  - But I'd still want like 10x more samples for Tencent to judge it decently
+- This is only really gonna work if we process more of the dataset...
+  - 1000 works took ~30 minutes. So 10,000 works would take ~5 hours. It's doable as an experiment to leave cooking overnight.
+- This seems pretty important to check.
+- For this 1000-work set, I got 52 papers not found (potentially there are other errors but I think they are rarer). Heck, I may as well feed the whole dataset.
+
+# 2023-Nov-01
+
+## Preparing datasets for submission
+
+- Final publications dataset (including OpenAI amendment)
+  - JSON?
+  - Seems inappropriate to have a pickle file.
+  - From ChatGPT/twitter brief report:
+    - They use a link: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/PQYF6M
+    - The files include .pdf, .tab, .csv, .txt
+  - OpenAlex data looks like JSON, but is that the recommended format?
+  - OpenAlex snapshot data: https://docs.openalex.org/download-all-data/snapshot-data-format
+    - The data files are gzip-compressed JSON Lines, one row per entity
+  - I've saved the publications, selected institution IDs and institution aliases as three separate JSON Lines files. JSON Lines validator said they are valid.
+  - I can now load the data from the JSON Lines format and run the publication analysis as before.
+- Training compute dataset (CSV)
+  - Saved a CSV snapshot. Had to update the plot with new data - Huawei entered due to us adding PanGu-Sigma, knocking Amazon out of the top 10
+- Algorithmic innovation dataset (CSV)
+  - Saved a CSV snapshot of origins and occurrences. Will need to update this later in the week if I make changes.
+
+## Semantic scholar comparison
+
+- Final count: 42255/66093 [20:43:08<17:26:47, 2.63s/it]
+- New results overall (42255 works): mean ratio 1.9, median ratio 1.4, std in ratio 2.5
+
+- New results by industry:
+
+```
+Meta (89 works)
+Mean ratio: 1.896489463923849
+Median ratio: 1.5
+Std ratio: 2.3966775254687116
+
+Google (4745 works)
+Mean ratio: 2.125162511711967
+Median ratio: 1.446808510638298
+Std ratio: 3.163094871588936
+
+OpenAI (48 works)
+Mean ratio: 4.195710141475012
+Median ratio: 1.7225490196078432
+Std ratio: 10.123030634727396
+
+Quansight (2 works)
+Mean ratio: 1.0878747103236899
+Median ratio: 1.0878747103236899
+Std ratio: 0.026650220527771554
+
+Enthought (8 works)
+Mean ratio: 1.3421375634061228
+Median ratio: 1.0878747103236899
+Std ratio: 0.5436382899090877
+
+DeepMind (105 works)
+Mean ratio: 3.602968531075915
+Median ratio: 1.78
+Std ratio: 8.384972810243548
+
+Microsoft (6063 works)
+Mean ratio: 1.9897740057098392
+Median ratio: 1.4
+Std ratio: 3.0399758889439563
+
+IBM (6262 works)
+Mean ratio: 1.5940899080573192
+Median ratio: 1.3
+Std ratio: 2.040493327646889
+
+Amazon (1517 works)
+Mean ratio: 2.312106270683693
+Median ratio: 1.5041322314049588
+Std ratio: 2.93420658934553
+
+Adobe (1503 works)
+Mean ratio: 2.018958974526198
+Median ratio: 1.4
+Std ratio: 2.56179321311014
+
+Netflix (116 works)
+Mean ratio: 1.7066145168013023
+Median ratio: 1.4365079365079365
+Std ratio: 1.3188394430467636
+
+Intel (3162 works)
+Mean ratio: 1.5304073375544947
+Median ratio: 1.251481782154018
+Std ratio: 1.5031469045966916
+
+Huawei (2719 works)
+Mean ratio: 1.8590031653202637
+Median ratio: 1.3173076923076923
+Std ratio: 2.3013300935800287
+
+Salesforce (122 works)
+Mean ratio: 2.730892192212752
+Median ratio: 1.7171052631578947
+Std ratio: 2.669937271870611
+
+Baidu (1212 works)
+Mean ratio: 1.9553524367120914
+Median ratio: 1.4558441558441557
+Std ratio: 1.9580921394037805
+
+Nvidia (877 works)
+Mean ratio: 2.1296540292409865
+Median ratio: 1.5
+Std ratio: 2.4262642868759894
+
+Yandex (130 works)
+Mean ratio: 1.8705082271871645
+Median ratio: 1.4085850556438793
+Std ratio: 1.852654289996645
+
+NEC (826 works)
+Mean ratio: 1.544143939987172
+Median ratio: 1.25
+Std ratio: 1.5511629473173607
+
+Twitter (214 works)
+Mean ratio: 1.5433443217405982
+Median ratio: 1.1764705882352942
+Std ratio: 1.212086981991162
+
+Tencent (2345 works)
+Mean ratio: 2.087809403113888
+Median ratio: 1.4825581395348837
+Std ratio: 2.297856165083195
+
+Naver (341 works)
+Mean ratio: 2.135714036751277
+Median ratio: 1.5
+Std ratio: 1.8451477435620465
+
+Uber (101 works)
+Mean ratio: 2.3951002077014047
+Median ratio: 1.3333333333333333
+Std ratio: 6.218066478434155
+
+Alibaba (2262 works)
+Mean ratio: 2.1228645192955518
+Median ratio: 1.5656275635767023
+Std ratio: 2.1408981578173205
+
+Xerox (295 works)
+Mean ratio: 1.4120552646159417
+Median ratio: 1.3333333333333333
+Std ratio: 0.644365459542821
+
+Group Sense (498 works)
+Mean ratio: 2.059920063914083
+Median ratio: 1.4346153846153846
+Std ratio: 2.6202508495508545
+```
+
+- Companies whose citation counts are more underestimated than the average (1.9x): OpenAI (4.2x), DeepMind (3.6x), Amazon (2.3x), Salesforce (2.7x), Uber (2.4x)
+  - I.e. undervalued relative to other companies
+- Companies whose citation counts are less underestimated than the average (1.9x): Quansight (1.1x), Enthought (1.3x), IBM (1.6x), Netflix (1.7x), Intel (1.5x), NEC (1.5x), Twitter (1.5x), Xerox (1.4x)
+  - I.e. overvalued relative to other companies
+- Companies whose citation coutns are simialr to the average (1.9x): Meta (1.9x), Google (2.1x), Microsoft (2.0x), Adobe (2.0x), Huawei (1.9x), Baidu (2.0x), Nvidia (2.1x), Yandex (1.9x), Tencent (2.1x), Naver (2.1x), Alibaba (2.1x), SenseTime (2.1x)
+- Overall range of average ratios (excluding Quansight and Enthought) is 1.4 to 4.2x.
+- Would overall conclusions change if we adjusted for these differences in ratio?
+  - DeepMind relative to Meta? DeepMind would go up 1.9x in citations relative to Meta (3.6 / 1.9 ~= 1.9).
+  - Rough calc of change in total citations: 69000 * 3.6 = 248400.0; 188000 * 1.9 = 357200.0. Meta would still be ahead of DeepMind but much more similar.
+  - IBM sits in between them currently. IBM would become 105000 * 1.6 = 168000.0, falling behind DeepMind.
+  - OpenAI would move up a couple of ranks in total citations with the 4.2x multiplier, but still not be top 5. (4.2 * 20000 = 84000).
+  - DeepMind would pull ahead of Meta to place 2nd in citations per author.
+  - So consider the rankings of DeepMind again:
+    - 14th on total publications
+    - 4th on total citations
+    - 2nd on citations per author per year
+    - 6th on training compute
+    - 4th on innovations
+  - DeepMind still wouldn't meet our criteria of top 3 on 3 metrics to be a "highlight".
+  - Microsoft? No, there's no movement in or out of top 3.
