@@ -14,7 +14,7 @@ Supporting notebooks and code:
 - `final_publications_dataset.ipynb` merges the initial dataset and OpenAI dataset into the final publications dataset
 - `publications_checks.ipynb` runs additional analysis (e.g. statistical significance), accuracy checks, and other sense checks on the publication dataset
 - `openalex_semanticscholar_comparison.ipynb` measures agreement between the citation counts in OpenAlex and Semantic Scholar
-- `researcher_impact` subfolder contains common supporting code; e.g. `processors.py` implements the extraction of author and citation data
+- `research_impact` subfolder contains common supporting code; e.g. `processors.py` implements the extraction of author and citation data
 
 `notes.md` is a detailed but incomplete log of the research process.
 
