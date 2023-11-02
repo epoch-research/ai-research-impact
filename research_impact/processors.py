@@ -2,9 +2,9 @@ from collections import defaultdict
 import numpy as np
 import unittest
 
-from researcher_impact.citations import get_bounded_citations
-from researcher_impact.utils import dicts_to_dataarrays
-from researcher_impact.test_works import TEST_WORKS
+from research_impact.citations import get_bounded_citations
+from research_impact.utils import dicts_to_dataarrays
+from research_impact.test_works import TEST_WORKS
 
 
 class OpenAlexProcessor:
