@@ -14,11 +14,13 @@ class OpenAlexProcessor:
         selected_institution_ids=None,
         institution_aliases=None,
         citation_year_bound=3,
+        deduplicate_authors_flag=True,
     ):
         self.works = works
         self.selected_institution_ids = selected_institution_ids
         self.institution_aliases = institution_aliases
         self.citation_year_bound = citation_year_bound
+        self.deduplicate_authors_flag = deduplicate_authors_flag
 
         self.data = {}
         self.avg_coauthor_counts = None
@@ -108,13 +110,21 @@ class OpenAlexProcessor:
         for alias, year_data in self.author_id_to_name.items():
             for pub_year, author_id_to_name in year_data.items():
                 unique_ids = set()
-                encountered_names = set()
+                unique_ids_list = []
+                encountered_names_set = set()
+                encountered_names_list = []
                 for id_, name in author_id_to_name.items():
-                    if name not in encountered_names:
+                    unique_ids_list.append(id_)
+                    encountered_names_list.append(name)
+                    if name not in encountered_names_set:
                         unique_ids.add(id_)
-                        encountered_names.add(name)
-                self.data["authors"][alias][pub_year] = unique_ids
-                self.data["author_names"][alias][pub_year] = list(encountered_names)
+                        encountered_names_set.add(name)
+                if self.deduplicate_authors_flag:
+                    self.data["authors"][alias][pub_year] = unique_ids
+                    self.data["author_names"][alias][pub_year] = list(encountered_names_set)
+                else:
+                    self.data["authors"][alias][pub_year] = unique_ids_list
+                    self.data["author_names"][alias][pub_year] = encountered_names_list
 
     def get_author_data(self):
         return self.data["authors"]
