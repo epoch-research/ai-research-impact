@@ -2,6 +2,13 @@
 
 This repository contains code to reproduce the analysis from "Who is leading in AI? An analysis of industry AI research".
 
+To install the Python environment using Conda:
+
+    conda env create -f environment.yml
+
+The data needed to run the main notebooks can be downloaded at https://epochai.org/data/ai-researcher-impact.zip.
+Extract the `data` folder from the zip file into the top level of this repository.
+
 Main notebooks:
 - `publications_analysis.ipynb` runs the main analysis of the publication dataset, reproducing Figure 1 (a) and (c) in the paper
 - `compute_analysis.ipynb` runs the analysis of companies' frontier training compute, reproducing Figure 1 (b) in the paper
